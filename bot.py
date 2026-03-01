@@ -8,6 +8,14 @@ from telegram import BotCommand
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from config import TELEGRAM_BOT_TOKEN, WORK_DIR, logger
+from handlers.cd import cd_handler, cd_callback_handler
+from handlers.claude import claude_handler, claude_continue_handler, chat_handler, exit_handler
+from handlers.files import file_upload_handler
+from handlers.newproject import newproject_handler
+from handlers.shell import shell_handler
+from handlers.start import start_handler, help_handler
+from handlers.status import status_handler
+from handlers.tmux import tmux_handler
 
 BOT_COMMANDS = [
     BotCommand("claude", "Run a one-shot Claude prompt"),
@@ -20,14 +28,6 @@ BOT_COMMANDS = [
     BotCommand("status", "Show system status"),
     BotCommand("help", "Show help message"),
 ]
-from handlers.start import start_handler, help_handler
-from handlers.shell import shell_handler
-from handlers.claude import claude_handler, claude_continue_handler, chat_handler, exit_handler
-from handlers.files import file_upload_handler
-from handlers.cd import cd_handler, cd_callback_handler
-from handlers.newproject import newproject_handler
-from handlers.status import status_handler
-from handlers.tmux import tmux_handler
 
 
 def main():

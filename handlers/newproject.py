@@ -41,7 +41,10 @@ async def newproject_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def pending_project_md_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle plain text when we're waiting for project.md content."""
-    folder = Path(context.user_data.pop("pending_project_md"))
+    folder_path = context.user_data.pop("pending_project_md", None)
+    if folder_path is None:
+        return
+    folder = Path(folder_path)
     text = update.message.text
 
     project_file = folder / "project.md"

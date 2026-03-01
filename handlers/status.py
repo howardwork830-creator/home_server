@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from config import TAILSCALE_STATUS_TIMEOUT
 from handlers.auth import authorized
 from handlers.cd import get_working_dir
 from utils.subprocess_runner import run_shell_command
@@ -22,13 +23,14 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     parts.append(f"Disk:\n{output}")
 
     # Tailscale (optional — may not be installed yet)
-    output, rc = await run_shell_command("tailscale status", timeout=5)
+    output, rc = await run_shell_command("tailscale status", timeout=TAILSCALE_STATUS_TIMEOUT)
     if rc == 0:
         parts.append(f"Tailscale:\n{output}")
     else:
         parts.append("Tailscale: not running or not installed")
 
+    body = "\n".join(parts)
     await update.message.reply_text(
-        f"```\n{chr(10).join(parts)}\n```",
+        f"```\n{body}\n```",
         parse_mode="Markdown",
     )

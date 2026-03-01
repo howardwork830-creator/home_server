@@ -159,8 +159,7 @@ home server/
 │   ├── files.py               # File upload handler
 │   ├── start.py               # /start and /help handlers
 │   ├── status.py              # /status handler
-│   ├── tmux.py                # /tmux handler
-│   └── git_cmd.py             # Git subcommand validation helper
+│   └── tmux.py                # /tmux handler
 └── utils/
     ├── subprocess_runner.py   # Async command execution with timeout + output cap
     ├── chunker.py             # Split text for Telegram's message limit

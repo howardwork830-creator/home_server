@@ -6,6 +6,9 @@ from telegram.ext import ContextTypes
 from config import AUTHORIZED_USER_IDS, WORK_DIR, logger
 from handlers.auth import authorized
 
+CHECK_MARK = "\u2713"
+BACK_ARROW = "\u2190"
+
 DESKTOP = Path.home() / "Desktop"
 
 
@@ -113,7 +116,7 @@ async def cd_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         buttons = [
             [InlineKeyboardButton(
-                f"\u2713 Select: {name}/",
+                f"{CHECK_MARK} Select: {name}/",
                 callback_data=f"cdset:{name}",
             )]
         ]
@@ -123,7 +126,7 @@ async def cd_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                 [InlineKeyboardButton(sd.name, callback_data=f"cdset:{rel}")]
             )
         buttons.append(
-            [InlineKeyboardButton("\u2190 Back", callback_data="cd:__back__")]
+            [InlineKeyboardButton(f"{BACK_ARROW} Back", callback_data="cd:__back__")]
         )
 
         await query.edit_message_text(
