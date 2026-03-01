@@ -4,3 +4,4 @@ __pycache__/
 *.log
 .DS_Store
 audit.jsonl
+.pytest_cache/

@@ -8,6 +8,8 @@ KEYBOARD = ReplyKeyboardMarkup(
         ["Shell", "Claude"],
         ["Files", "Git"],
         ["Status", "tmux"],
+        ["CD", "Chat"],
+        ["New Project"],
     ],
     resize_keyboard=True,
 )
@@ -18,8 +20,13 @@ HELP_TEXT = """Available commands:
 /help — This message
 /status — System status (uptime, disk, Tailscale)
 /claude <prompt> — Ask Claude a question
+/claude_continue <prompt> — Continue the last Claude conversation
 /tmux ls — List tmux sessions
 /tmux send <session> <command> — Send command to tmux session
+/cd — Select project directory (Desktop folders)
+/newproject <name> — Create a new project folder on Desktop
+/chat — Enter Claude chat mode (back-and-forth coding)
+/exit — Leave chat mode
 
 Plain text — Executed as a shell command (allowlisted commands only)
 Document upload — Saved to the working directory

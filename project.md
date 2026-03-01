@@ -17,9 +17,9 @@ AI AGENT CONTEXT:
 | **Purpose** | Remote coding server controlled from phone via Telegram, powered by Claude |
 | **Platform** | Mac M1 (Apple Silicon), macOS Ventura+ |
 | **Stack** | Python 3.12, python-telegram-bot v20+, Anthropic SDK, Tailscale VPN |
-| **Working Dir** | `~/Server/Projects` |
-| **Bot Dir** | `~/Server/TelegramBot` |
-| **Log Dir** | `~/Server/Logs` |
+| **Working Dir** | `/Users/howard/Desktop/VS code file/home server` |
+| **Bot Dir** | `/Users/howard/Desktop/VS code file/home server` |
+| **Log Dir** | `/Users/howard/Desktop/VS code file/home server` (bot.log, bot_stdout.log, bot_stderr.log) |
 
 ---
 
@@ -62,7 +62,9 @@ References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants
 | **Shell** | `ls`, `pwd`, `cat`, `head`, `tail`, `grep`, `find`, `ps`, `df`, `uptime` (non-interactive only) |
 | **Git** | `git status`, `git add`, `git commit`, `git push` |
 | **Claude** | Code generation, refactoring, error explanation |
-| **Files** | Upload via Telegram → `~/Server/Projects`; view via `cat` / `head` / `tail` |
+| **Claude chat** | `/chat` for interactive back-and-forth coding; `/exit` to leave |
+| **Files** | Upload via Telegram → working dir; view via `cat` / `head` / `tail` |
+| **Directory** | `/cd` to switch project; `/newproject` to create new project folder |
 | **Status** | `df -h`, `uptime`, process/memory snapshots |
 | **tmux** | List sessions; send simple non-interactive commands |
 
@@ -90,9 +92,9 @@ References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants
 - **User whitelist:** `AUTHORIZED_USER_IDS` in `.env`; only listed users can use bot
 - **Allowlist:** Only base commands in `SAFE_COMMANDS` (e.g. `ls`, `git`, `python3`, `df`, `ps`, `tmux`, `tailscale`)
 - **Blocklist:** Regex patterns for `rm -rf`, `sudo rm`, `mkfs`, `chmod 777`, `reboot`, `shutdown`, etc.
-- **Working dir:** Bot runs in `~/Server/Projects` only
+- **Working dir:** Bot runs in `/Users/howard/Desktop/VS code file/home server` only
 - **Secrets:** `.env` with `chmod 600`, never in Git
-- **Tailscale ACLs:** Restrict devices and ports
+- **Tailscale ACLs:** 2-device personal tailnet uses default ACLs (Mac + iPhone); acceptable for this threat model since both devices are owner-controlled
 
 ---
 
@@ -120,15 +122,15 @@ References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants
 
 ## Environment Variables
 
-Location: `~/Server/TelegramBot/.env`  
+Location: `/Users/howard/Desktop/VS code file/home server/.env`
 Permissions: `chmod 600`
 
 ```env
 TELEGRAM_BOT_TOKEN=123456789:ABC...
 AUTHORIZED_USER_IDS=123456789
 ANTHROPIC_API_KEY=sk-ant-...
-WORK_DIR=/Users/yourname/Server/Projects
-LOG_FILE=/Users/yourname/Server/Logs/bot.log
+WORK_DIR=/Users/howard/Desktop/VS code file/home server
+LOG_FILE=/Users/howard/Desktop/VS code file/home server/bot.log
 LOG_LEVEL=INFO
 ```
 
@@ -150,8 +152,7 @@ sudo pmset -c displaysleep 10
 sudo pmset -c disksleep 0
 sudo pmset -c autopoweroff 0
 
-# Create dirs
-mkdir -p ~/Server/{Projects,Logs,Backups,TelegramBot}
+# Bot lives in: /Users/howard/Desktop/VS code file/home server
 ```
 
 ### 2. Install Tailscale
@@ -177,7 +178,7 @@ tailscale ip -4    # Record IP (e.g. 100.94.x.x)
 ### 5. Bot Dependencies
 
 ```bash
-cd ~/Server/TelegramBot
+cd "/Users/howard/Desktop/VS code file/home server"
 pip3 install python-telegram-bot anthropic aiofiles python-dotenv
 ```
 
@@ -196,11 +197,16 @@ pip3 install python-telegram-bot anthropic aiofiles python-dotenv
 
 | Command | Behavior |
 |---------|----------|
-| `/start` | Auth check; show buttons: Shell, Claude, Files, Status, tmux, Git |
+| `/start` | Auth check; show buttons: Shell, Claude, Files, Status, tmux, Git, CD, Chat, New Project |
 | `/help` | Describe supported commands and limits |
 | `/status` | Run `df -h`, `uptime`, optional `tailscale status` |
 | `/claude <prompt>` | Send prompt to Claude, return response (chunked) |
-| Plain text | Treated as shell command (allowlist + blocklist) |
+| `/claude_continue <prompt>` | Continue the last Claude conversation |
+| `/chat` | Enter interactive Claude chat mode (back-and-forth coding) |
+| `/exit` | Leave chat mode |
+| `/cd` | Select a project directory from Desktop folders |
+| `/newproject <name>` | Create a new project folder on Desktop and switch to it |
+| Plain text | Treated as shell command (allowlist + blocklist); routed to Claude in chat mode |
 | Document | Save to `WORK_DIR`, confirm path |
 
 ### Safety Logic
@@ -225,23 +231,26 @@ File: `~/Library/LaunchAgents/com.howard.telegrambot.plist`
     <string>com.howard.telegrambot</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/opt/homebrew/bin/python3</string>
-        <string>/Users/yourname/Server/TelegramBot/bot.py</string>
+        <string>/Library/Frameworks/Python.framework/Versions/3.13/bin/python3</string>
+        <string>/Users/howard/Desktop/VS code file/home server/bot.py</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/Users/yourname/Server/TelegramBot</string>
+    <string>/Users/howard/Desktop/VS code file/home server</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
-    <dict><key>SuccessfulExit</key><false/></dict>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
     <key>StandardOutPath</key>
-    <string>/Users/yourname/Server/Logs/bot_stdout.log</string>
+    <string>/Users/howard/Desktop/VS code file/home server/bot_stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/yourname/Server/Logs/bot_stderr.log</string>
+    <string>/Users/howard/Desktop/VS code file/home server/bot_stderr.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>/Users/howard/.npm-global/bin:/opt/homebrew/bin:/Library/Frameworks/Python.framework/Versions/3.13/bin:/usr/local/bin:/usr/bin:/bin</string>
     </dict>
 </dict>
 </plist>

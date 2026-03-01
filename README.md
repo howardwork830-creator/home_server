@@ -6,9 +6,12 @@ A Telegram bot for remote control of a Mac M1 home server. Execute shell command
 
 - **Shell commands** — Run allowlisted commands (`ls`, `git status`, `python3 script.py`, etc.) with input validation and output scrubbing
 - **Claude AI agent** — Full coding assistant that can read, edit, and create files with controlled permissions
+- **Claude chat mode** — `/chat` enters interactive back-and-forth coding with Claude; `/exit` to leave
 - **File uploads** — Send documents to save them to the working directory
+- **Directory switching** — `/cd` to pick a project folder on Desktop; `/newproject` to create one
 - **Tmux control** — List and send commands to tmux sessions
 - **System status** — Uptime, disk usage, and Tailscale status
+- **Command menu** — Type `/` in Telegram to see all available commands
 
 ## Quick Start
 
@@ -57,6 +60,10 @@ python3 bot.py
 | `/help` | List all commands and allowed shell commands |
 | `/claude <prompt>` | Start a Claude AI coding session |
 | `/claude_continue <prompt>` | Continue the last Claude conversation |
+| `/chat` | Enter interactive Claude chat mode |
+| `/exit` | Leave chat mode |
+| `/cd` | Select a project directory (Desktop folders) |
+| `/newproject <name>` | Create a new project folder on Desktop |
 | `/status` | System status (uptime, disk, Tailscale) |
 | `/tmux ls` | List tmux sessions |
 | `/tmux send <session> <cmd>` | Send a command to a tmux session |
@@ -96,7 +103,6 @@ After a `/claude` session, use `/claude_continue <follow-up>` to resume the same
 | **Dangerous pattern filter** | `rm -rf`, `sudo`, `mkfs`, `chmod 777`, `reboot`, etc. blocked |
 | **Git subcommand allowlist** | Only `status`, `add`, `commit`, `push`, `log`, `diff`, `branch` |
 | **Claude tool allowlist** | Only `Read`, `Glob`, `Grep`, `Edit`, `Write`, and restricted `Bash` |
-| **Claude permission mode** | `plan` mode — Claude proposes changes, confirms before executing |
 | **Claude system prompt** | Injected rules forbidding access to secrets and destructive ops |
 | **Claude budget cap** | $1.00 max API spend per request |
 | **Output scrubbing** | API keys, tokens, and `PASSWORD=`/`SECRET=` lines redacted before sending |
@@ -147,6 +153,8 @@ home server/
 ├── handlers/
 │   ├── auth.py                # @authorized decorator + audit logging
 │   ├── claude.py              # /claude and /claude_continue handlers
+│   ├── cd.py                  # /cd directory selector handler
+│   ├── newproject.py          # /newproject project creation handler
 │   ├── shell.py               # Shell command validation and execution
 │   ├── files.py               # File upload handler
 │   ├── start.py               # /start and /help handlers

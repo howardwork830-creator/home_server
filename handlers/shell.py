@@ -13,6 +13,9 @@ from config import (
     logger,
 )
 from handlers.auth import authorized
+from handlers.cd import get_working_dir
+from handlers.claude import is_chat_mode, chat_message_handler
+from handlers.newproject import pending_project_md_handler
 from utils.audit import log_action
 from utils.chunker import chunk_text
 from utils.path_guard import guard_command_paths
@@ -111,9 +114,22 @@ async def shell_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Git": "Type a git command (e.g. `git status`, `git log`).",
         "Status": "Use /status to see system info.",
         "tmux": "Use /tmux ls or /tmux send <session> <cmd>.",
+        "CD": "Use /cd to select a project directory on Desktop.",
+        "Chat": "Use /chat to enter Claude chat mode for back-and-forth coding.",
+        "New Project": "Use /newproject <name> to create a new project folder on Desktop.",
     }
     if command in button_hints:
         await update.message.reply_text(button_hints[command])
+        return
+
+    # Pending project.md — intercept before chat mode and shell
+    if context.user_data.get("pending_project_md"):
+        await pending_project_md_handler(update, context)
+        return
+
+    # Chat mode — route to Claude instead of shell
+    if is_chat_mode(context):
+        await chat_message_handler(update, context)
         return
 
     # Rate limit check
@@ -131,7 +147,7 @@ async def shell_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     logger.info("Running command from %s: %s", user_id, command)
     start_time = time.monotonic()
-    output, return_code = await run_shell_command(command)
+    output, return_code = await run_shell_command(command, cwd=get_working_dir(context))
     duration = time.monotonic() - start_time
 
     # Scrub secrets from output

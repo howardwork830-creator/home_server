@@ -3,8 +3,9 @@ from pathlib import Path
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from config import MAX_UPLOAD_SIZE, WORK_DIR, logger
+from config import MAX_UPLOAD_SIZE, logger
 from handlers.auth import authorized
+from handlers.cd import get_working_dir
 
 
 @authorized
@@ -27,7 +28,7 @@ async def file_upload_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     if safe_name.startswith("."):
         safe_name = "_" + safe_name
 
-    dest = WORK_DIR / safe_name
+    dest = Path(get_working_dir(context)) / safe_name
 
     logger.info(
         "File upload from %s: %s -> %s",
