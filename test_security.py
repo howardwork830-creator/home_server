@@ -37,7 +37,7 @@ from config import (
 )
 
 test("SHELL_METACHARACTERS has entries", len(SHELL_METACHARACTERS) >= 7)
-test("DANGEROUS_ARGS has find/sort/grep/python3", all(k in DANGEROUS_ARGS for k in ["find", "sort", "grep", "python3"]))
+test("DANGEROUS_ARGS has find/sort/grep", all(k in DANGEROUS_ARGS for k in ["find", "sort", "grep"]))
 test("BLOCKED_PATHS has ~/.ssh", any("ssh" in p for p in BLOCKED_PATHS))
 test("SECRET_PATTERNS has entries", len(SECRET_PATTERNS) >= 5)
 test("MAX_OUTPUT_BYTES is 50KB", MAX_OUTPUT_BYTES == 50 * 1024)
@@ -97,7 +97,7 @@ arg_tests = [
     ("sort",    ["sort", "-r", "file.txt"],                  False),
     ("grep",    ["grep", "--pre=evil", "foo"],               True),
     ("grep",    ["grep", "-r", "pattern", "."],              False),
-    ("python3", ["python3", "-c", "import os"],              True),
+    ("python3", ["python3", "-c", "import os"],              False),
     ("python3", ["python3", "script.py"],                    False),
 ]
 

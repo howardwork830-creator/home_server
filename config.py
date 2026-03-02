@@ -24,6 +24,7 @@ SAFE_COMMANDS: set[str] = {
     "ls", "pwd", "cat", "head", "tail", "grep", "find", "ps", "df",
     "uptime", "echo", "wc", "sort", "tree", "which", "file", "du",
     "date", "whoami", "python3", "git", "tmux", "tailscale", "claude",
+    "npm", "npx",
 }
 
 DANGEROUS_PATTERNS: list[re.Pattern] = [
@@ -51,7 +52,6 @@ DANGEROUS_ARGS: dict[str, list[str]] = {
     "find": ["-exec", "-execdir", "-delete", "-ok"],
     "sort": ["--compress-prog"],
     "grep": ["--pre"],
-    "python3": ["-c"],
 }
 
 # --- Sensitive paths ---
@@ -66,7 +66,7 @@ BLOCKED_PATH_PATTERNS: list[re.Pattern] = [
 ]
 
 # --- Timeouts & limits ---
-COMMAND_TIMEOUT = 30
+COMMAND_TIMEOUT = 300
 TAILSCALE_STATUS_TIMEOUT = 5
 CLAUDE_TIMEOUT = 300
 TELEGRAM_CHUNK_SIZE = 4000
