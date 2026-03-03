@@ -134,6 +134,9 @@ async def shell_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Chat": "Use /chat to enter Claude chat mode for back-and-forth coding.",
         "New Project": "Use /newproject <name> to create a new project folder on Desktop.",
         "Network": "Use /network to see network diagnostics (IPs, connectivity, VPN).",
+        "Get File": "Use /getfile <path> to download a file.",
+        "App": "Use /app to list, launch, or quit applications.",
+        "Sys Info": "Use /sysinfo for detailed system information.",
     }
     if command in button_hints:
         await update.message.reply_text(button_hints[command])

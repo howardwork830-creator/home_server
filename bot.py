@@ -8,14 +8,18 @@ from telegram import BotCommand
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from config import TELEGRAM_BOT_TOKEN, WORK_DIR, logger
+from handlers.app import app_handler
 from handlers.cd import cd_handler, cd_callback_handler
 from handlers.claude import claude_handler, claude_continue_handler, chat_handler, exit_handler
 from handlers.files import file_upload_handler
+from handlers.getfile import getfile_handler
+from handlers.monitor import monitor_handler, monitor_refresh_callback
 from handlers.network import network_handler
-from handlers.newproject import newproject_handler
+from handlers.newproject import newproject_handler, pending_project_md_handler
 from handlers.shell import shell_handler
 from handlers.start import start_handler, help_handler
 from handlers.status import status_handler
+from handlers.sysinfo import sysinfo_handler
 from handlers.tmux import tmux_handler
 
 BOT_COMMANDS = [
@@ -27,7 +31,11 @@ BOT_COMMANDS = [
     BotCommand("newproject", "Create a new project"),
     BotCommand("tmux", "Manage tmux sessions"),
     BotCommand("status", "Show system status"),
+    BotCommand("getfile", "Download a file from server"),
+    BotCommand("app", "Manage running applications"),
+    BotCommand("sysinfo", "Detailed system information"),
     BotCommand("network", "Show network diagnostics"),
+    BotCommand("monitor", "Live screen monitor"),
     BotCommand("help", "Show help message"),
 ]
 
@@ -52,12 +60,23 @@ def main():
     app.add_handler(CommandHandler("chat", chat_handler))
     app.add_handler(CommandHandler("exit", exit_handler))
     app.add_handler(CommandHandler("cd", cd_handler))
+    app.add_handler(CommandHandler("getfile", getfile_handler))
+    app.add_handler(CommandHandler("app", app_handler))
+    app.add_handler(CommandHandler("sysinfo", sysinfo_handler))
     app.add_handler(CommandHandler("network", network_handler))
+    app.add_handler(CommandHandler("monitor", monitor_handler))
     app.add_handler(CommandHandler("newproject", newproject_handler))
     app.add_handler(CallbackQueryHandler(cd_callback_handler, pattern=r"^cd"))
+    app.add_handler(CallbackQueryHandler(monitor_refresh_callback, pattern=r"^monitor_refresh$"))
 
     # File uploads (must be before the text catch-all)
     app.add_handler(MessageHandler(filters.Document.ALL, file_upload_handler))
+
+    # Pending project.md input (group -1 so it runs before shell catch-all)
+    app.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND,
+        pending_project_md_handler,
+    ), group=-1)
 
     # Plain text → shell command (catch-all, must be last)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, shell_handler))

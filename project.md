@@ -39,6 +39,10 @@ Mac M1 (Home) ──────────────────────
   │   ├── Shell commands (69 allowlisted)
   │   ├── System admin (disk, process, package, network)
   │   └── Claude AI agent (coding assistant)
+  ├── Screen Stream Pipeline
+  │   ├── screen_stream.py (capture → JPEG HTTP server :9999)
+  │   ├── go2rtc (MJPEG→HLS/WebRTC relay :1984)
+  │   └── miniapp/monitor.html (Telegram Mini App viewer)
   ├── Screen Sharing / VNC (full GUI access)
   └── Shell / Git / brew / tmux / tools
 ```
@@ -84,6 +88,7 @@ References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants
 | **Claude chat** | `/chat` for interactive back-and-forth coding; `/exit` to leave |
 | **Files** | Upload via Telegram → working dir; view via `cat` / `head` / `tail` |
 | **Directory** | `/cd` to switch project; `/newproject` to create new project folder |
+| **Live Monitor** | `/monitor` opens live HLS screen stream in Telegram Mini App (go2rtc) |
 | **Visual Monitoring** | VNC over Tailscale for full GUI access |
 
 ### Hard Limits
@@ -132,6 +137,23 @@ References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants
 ---
 
 ## Visual Monitoring
+
+### Live Screen Monitor
+
+Three-component pipeline for near-real-time screen viewing inside Telegram:
+
+```
+screen_stream.py ──► go2rtc ──► miniapp/monitor.html
+  (CoreGraphics      (MJPEG→HLS    (Telegram Mini App,
+   capture, JPEG      relay,         JS frame polling,
+   HTTP :9999)        port :1984)    hosted on GitHub Pages)
+```
+
+- **`screen_stream.py`** — Captures the display via CoreGraphics, serves JPEG frames on `/frame` and MJPEG on `/`
+- **`go2rtc`** — Relays the MJPEG stream, provides HLS/WebRTC endpoints for the Mini App
+- **`miniapp/monitor.html`** — Telegram WebApp that polls `/frame` for live updates; hosted on GitHub Pages
+
+**Launch all services:** `python3 start_all.py` (starts screen_stream, go2rtc, and bot together; Ctrl+C stops all)
 
 ### Full GUI Access via VNC
 
@@ -268,6 +290,7 @@ pip3 install python-telegram-bot anthropic aiofiles python-dotenv
 | `/cd` | Select a project directory from Desktop folders |
 | `/newproject <name>` | Create a new project folder on Desktop and switch to it |
 | `/network` | Run network diagnostics (interfaces, public IP, connectivity) |
+| `/monitor` | Open live screen monitor (Telegram Mini App via go2rtc HLS) |
 | Plain text | Treated as shell command (allowlist + blocklist); routed to Claude in chat mode |
 | Document | Save to `WORK_DIR`, confirm path |
 
@@ -394,7 +417,7 @@ caffeinate -t 3600 | shortcuts list
 | Can | Cannot |
 |-----|--------|
 | Remote admin via phone — shell, files, git, processes, packages, network | Full interactive TUI (vim, htop) over Telegram |
-| Full GUI control via VNC over Tailscale | Stream live video/screen over Telegram |
+| Live screen stream via /monitor (HLS in Telegram Mini App) | Sub-second latency (HLS has 3-6s delay) |
 | Full GUI control via VNC over Tailscale | VNC integrated into Telegram (requires separate client) |
 | Most daily dev + sysadmin tasks | Zero security risk (deliberate remote command surface) |
 | Install/update packages via Homebrew | Run arbitrary scripts without allowlist approval |

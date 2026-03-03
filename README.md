@@ -9,6 +9,7 @@ A Telegram bot for comprehensive remote administration of a Mac M1 home server. 
 - **Network diagnostics** — Ping, traceroute, DNS lookups, interface info, connection quality testing
 - **Claude AI agent** — Full coding assistant that can read, edit, and create files with controlled permissions
 - **Claude chat mode** — `/chat` enters interactive back-and-forth coding with Claude; `/exit` to leave
+- **Live screen monitor** — `/monitor` opens a live HLS stream in a Telegram Mini App (go2rtc + M1 hardware encoding)
 - **Visual monitoring** — macOS Screen Sharing (VNC) over Tailscale for full GUI access
 - **File uploads** — Send documents to save them to the working directory
 - **Directory switching** — `/cd` to pick a project folder on Desktop; `/newproject` to create one
@@ -56,7 +57,11 @@ Find your Telegram user ID by messaging [@userinfobot](https://t.me/userinfobot)
 ### 4. Run
 
 ```bash
+# Bot only
 python3 bot.py
+
+# All services (bot + screen stream + go2rtc)
+python3 start_all.py
 ```
 
 ## Commands
@@ -75,6 +80,7 @@ python3 bot.py
 | `/network` | Network diagnostics (interfaces, public IP, connectivity) |
 | `/tmux ls` | List tmux sessions |
 | `/tmux send <session> <cmd>` | Send a command to a tmux session |
+| `/monitor` | Open live screen monitor (Telegram Mini App) |
 | *plain text* | Execute as a shell command |
 | *file upload* | Save document to working directory |
 
@@ -98,6 +104,21 @@ Claude **cannot**:
 After a `/claude` session, use `/claude_continue <follow-up>` to resume the same conversation. The session ID is stored per-user.
 
 ## Visual Monitoring
+
+### Live Screen Monitor (Telegram Mini App)
+
+Use `/monitor` in Telegram to capture a screenshot instantly, or tap "Open Live Monitor" for a near-real-time screen feed inside Telegram — no separate VNC client needed.
+
+**Pipeline:** `screen_stream.py` (capture) → `go2rtc` (relay) → `miniapp/monitor.html` (viewer)
+
+**Setup:**
+1. Download the [go2rtc binary for Apple Silicon](https://github.com/AlexxIT/go2rtc/releases) and place it in the project directory
+2. Set `GO2RTC_HOST` in `.env` to your Mac's Tailscale IP + port (e.g., `100.94.x.x:1984`)
+3. Set `MINIAPP_BASE_URL` in `.env` to your GitHub Pages URL
+4. Start all services: `python3 start_all.py` (or start individually: `python3 screen_stream.py`, `./go2rtc`, `python3 bot.py`)
+5. In Telegram: `/monitor` → tap "Open Live Monitor"
+
+The "Open Live Monitor" button only appears when `GO2RTC_HOST` and `MINIAPP_BASE_URL` are set. Without them, `/monitor` still works as a screenshot tool with a Refresh button.
 
 ### Full GUI Access via VNC
 
@@ -177,9 +198,14 @@ Command output is never logged (could contain secrets).
 ```
 home server/
 ├── bot.py                     # Entry point — handler registration and polling
+├── start_all.py               # Launcher for all services (bot + stream + go2rtc)
+├── screen_stream.py           # Screen capture HTTP server (MJPEG + /frame)
 ├── config.py                  # All configuration, constants, and security rules
+├── go2rtc.yaml                # go2rtc relay configuration
 ├── requirements.txt           # Python dependencies
 ├── .env.example               # Environment variable template
+├── miniapp/
+│   └── monitor.html           # Telegram Mini App — live screen viewer
 ├── handlers/
 │   ├── auth.py                # @authorized decorator + audit logging
 │   ├── claude.py              # /claude and /claude_continue handlers
@@ -187,6 +213,7 @@ home server/
 │   ├── newproject.py          # /newproject project creation handler
 │   ├── shell.py               # Shell command validation and execution
 │   ├── files.py               # File upload handler
+│   ├── monitor.py             # /monitor live screen Mini App handler
 │   ├── network.py             # /network diagnostics handler
 │   ├── start.py               # /start and /help handlers
 │   ├── status.py              # /status handler

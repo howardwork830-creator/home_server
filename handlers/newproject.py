@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from telegram import Update
-from telegram.ext import ContextTypes
+from telegram.ext import ApplicationHandlerStop, ContextTypes
 
 from config import logger
 from handlers.auth import authorized
@@ -58,3 +58,4 @@ async def pending_project_md_handler(update: Update, context: ContextTypes.DEFAU
         f"Working dir set to:\n{folder}"
     )
     logger.info("User %s created project at %s", update.effective_user.id, folder)
+    raise ApplicationHandlerStop

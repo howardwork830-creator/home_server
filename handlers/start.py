@@ -10,6 +10,8 @@ KEYBOARD = ReplyKeyboardMarkup(
         ["Status", "tmux"],
         ["CD", "Chat"],
         ["New Project", "Network"],
+        ["Monitor", "Get File"],
+        ["App", "Sys Info"],
     ],
     resize_keyboard=True,
 )
@@ -28,11 +30,15 @@ HELP_TEXT = """Available commands:
 /newproject <name> — Create a new project folder on Desktop
 /chat — Enter Claude chat mode (back-and-forth coding)
 /exit — Leave chat mode
+/getfile <path> — Download a file from server to Telegram
+/app — List/launch/quit applications
+/sysinfo — Detailed system info (battery, memory, hardware, storage)
+/monitor — Open live screen monitor (via Telegram Mini App)
 
-Plain text — Executed as a shell command (69 allowlisted commands)
+Plain text — Executed as a shell command (72 allowlisted commands)
 Document upload — Saved to the working directory
 
-Allowed shell commands (69):
+Allowed shell commands (72):
 
 Core: ls, pwd, cat, head, tail, grep, find, echo, wc, sort, tree, which, file, du, date, whoami
 Dev: python3, npm, npx, git, tmux, claude
@@ -45,6 +51,7 @@ Media: afplay, say, sips, screencapture
 Text: sed, awk, uniq, pbcopy, pbpaste
 Compression: tar, gzip, gunzip, zip, unzip
 Automation: shortcuts, caffeinate
+Utilities: trash, mdfind, mdls
 
 Dangerous commands (rm -rf, sudo, etc.) are blocked. Some commands require specific flags (e.g. ping -c, top -l)."""
 

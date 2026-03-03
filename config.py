@@ -19,6 +19,11 @@ AUTHORIZED_USER_IDS: set[int] = {
 WORK_DIR = Path(os.getenv("WORK_DIR", str(Path(__file__).parent)))
 LOG_FILE = os.getenv("LOG_FILE", str(WORK_DIR / "bot.log"))
 
+# --- Monitor / Live Stream ---
+SCREEN_STREAM_PORT = int(os.getenv("SCREEN_STREAM_PORT", "9999"))
+GO2RTC_HOST = os.getenv("GO2RTC_HOST", "")
+MINIAPP_BASE_URL = os.getenv("MINIAPP_BASE_URL", "")
+
 # --- Command safety ---
 SAFE_COMMANDS: set[str] = {
     # Core (original)
@@ -47,6 +52,8 @@ SAFE_COMMANDS: set[str] = {
     "tar", "gzip", "gunzip", "zip", "unzip",
     # Automation
     "shortcuts", "caffeinate",
+    # Utilities
+    "trash", "mdfind", "mdls",
 }
 
 DANGEROUS_PATTERNS: list[re.Pattern] = [
@@ -131,6 +138,12 @@ SUBCOMMAND_ALLOWLISTS: dict[str, set[str]] = {
 }
 
 # --- Claude agent mode ---
+APP_LAUNCH_ALLOWLIST: set[str] = {
+    "Safari", "Finder", "Terminal", "Visual Studio Code",
+    "Preview", "TextEdit", "Activity Monitor", "Console",
+    "Music", "Photos", "Calculator", "Notes",
+}
+
 CLAUDE_ALLOWED_TOOLS: str = (
     "Read,Glob,Grep,Edit,Write,"
     "Bash(git:*),Bash(python3:*),Bash(ls:*),Bash(cat:*)"

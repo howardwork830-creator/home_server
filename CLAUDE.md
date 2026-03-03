@@ -9,8 +9,11 @@ A security-hardened Telegram bot that serves as a remote coding assistant on a M
 ## Commands
 
 ```bash
-# Run the bot
+# Run the bot only
 python3 bot.py
+
+# Run all services (bot + screen stream + go2rtc)
+python3 start_all.py
 
 # Run all 362 security tests
 python3 test_security.py
@@ -35,6 +38,12 @@ There is no separate lint or build step. The test suite (`test_security.py`) use
 5. Check base command against `SAFE_COMMANDS` allowlist
 6. Check per-command dangerous arguments (`DANGEROUS_ARGS`)
 7. Validate git subcommands against `ALLOWED_GIT_SUBCOMMANDS`
+
+**Screen Monitor Pipeline:** Three services work together for live screen viewing in Telegram:
+- `screen_stream.py` — CoreGraphics screen capture, serves JPEG frames over HTTP (port 9999)
+- `go2rtc` — Relays the MJPEG stream as HLS/WebRTC (port 1984); optional, binary not in git
+- `miniapp/monitor.html` — Telegram Mini App that polls frames for live updates (hosted on GitHub Pages)
+- `start_all.py` — Launches all three services (plus the bot) with graceful shutdown on Ctrl+C
 
 **Claude integration** (`handlers/claude.py`): Invokes the `claude` CLI in agent mode with `--output-format stream-json`. Output is parsed by `utils/claude_stream.py`, buffered for 3-second intervals, and sent to Telegram in chunks. Tool access is restricted to `CLAUDE_ALLOWED_TOOLS` in config.
 
@@ -70,4 +79,4 @@ All tests live in `test_security.py`. Tests are organized by security layer (met
 
 ## Environment
 
-Requires a `.env` file (see `.env.example`): `TELEGRAM_BOT_TOKEN`, `AUTHORIZED_USER_IDS`, `WORK_DIR`, `LOG_FILE`, `LOG_LEVEL`. The bot runs as a macOS LaunchAgent for 24/7 operation.
+Requires a `.env` file (see `.env.example`): `TELEGRAM_BOT_TOKEN`, `AUTHORIZED_USER_IDS`, `WORK_DIR`, `LOG_FILE`, `LOG_LEVEL`. Optional monitor vars: `SCREEN_STREAM_PORT`, `GO2RTC_HOST`, `MINIAPP_BASE_URL`. The bot runs as a macOS LaunchAgent for 24/7 operation.

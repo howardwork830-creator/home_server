@@ -5,3 +5,4 @@ __pycache__/
 .DS_Store
 audit.jsonl
 .pytest_cache/
+go2rtc

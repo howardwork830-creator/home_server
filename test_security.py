@@ -496,7 +496,7 @@ print("=" * 60)
 print("14. CONFIG — EXPANDED COMMANDS & SECURITY RULES")
 print("=" * 60)
 
-test("SAFE_COMMANDS has 69 entries", len(SAFE_COMMANDS) == 69, f"got {len(SAFE_COMMANDS)}")
+test("SAFE_COMMANDS has 72 entries", len(SAFE_COMMANDS) == 72, f"got {len(SAFE_COMMANDS)}")
 test("SUBCOMMAND_ALLOWLISTS has 10 entries", len(SUBCOMMAND_ALLOWLISTS) == 10, f"got {len(SUBCOMMAND_ALLOWLISTS)}")
 test("REQUIRED_ARGS has ping", "ping" in REQUIRED_ARGS)
 test("REQUIRED_ARGS has top", "top" in REQUIRED_ARGS)
@@ -775,6 +775,74 @@ print("=" * 60)
 test("curl file:// blocked", validate_command("curl file:///etc/passwd") is not None)
 test("curl FILE:// blocked (case-insensitive)", validate_command("curl FILE:///etc/passwd") is not None)
 test("curl http:// allowed", validate_command("curl http://example.com") is None)
+
+# ============================================================
+print()
+print("=" * 60)
+print("20. NEW SAFE_COMMANDS — TRASH, MDFIND, MDLS")
+print("=" * 60)
+
+test("SAFE_COMMANDS has 'trash'", "trash" in SAFE_COMMANDS)
+test("SAFE_COMMANDS has 'mdfind'", "mdfind" in SAFE_COMMANDS)
+test("SAFE_COMMANDS has 'mdls'", "mdls" in SAFE_COMMANDS)
+test("validate_command allows 'trash file.txt'", validate_command("trash file.txt") is None)
+test("validate_command allows 'mdfind README'", validate_command("mdfind README") is None)
+test("validate_command allows 'mdls file.txt'", validate_command("mdls file.txt") is None)
+
+# ============================================================
+print()
+print("=" * 60)
+print("21. GETFILE — PATH GUARD INTEGRATION")
+print("=" * 60)
+
+# Reuse check_path from path_guard (same function getfile_handler uses)
+test("/getfile blocks .env path", check_path(".env") is not None)
+test("/getfile blocks ~/.ssh/id_rsa", check_path("~/.ssh/id_rsa") is not None)
+test("/getfile blocks ~/.aws/credentials", check_path("~/.aws/credentials") is not None)
+test("/getfile allows README.md", check_path("README.md") is None)
+test("/getfile allows src/main.py", check_path("src/main.py") is None)
+
+# ============================================================
+print()
+print("=" * 60)
+print("22. APP — NAME SANITIZATION & ALLOWLIST")
+print("=" * 60)
+
+from config import APP_LAUNCH_ALLOWLIST
+from handlers.app import _sanitize_app_name
+
+test("APP_LAUNCH_ALLOWLIST exists", isinstance(APP_LAUNCH_ALLOWLIST, set))
+test("APP_LAUNCH_ALLOWLIST has Safari", "Safari" in APP_LAUNCH_ALLOWLIST)
+test("APP_LAUNCH_ALLOWLIST has Finder", "Finder" in APP_LAUNCH_ALLOWLIST)
+test("APP_LAUNCH_ALLOWLIST has Terminal", "Terminal" in APP_LAUNCH_ALLOWLIST)
+
+# Sanitization tests
+test("App name: normal name OK", _sanitize_app_name("Safari") == "Safari")
+test("App name: strips whitespace", _sanitize_app_name("  Safari  ") == "Safari")
+test("App name: rejects double quotes", _sanitize_app_name('Saf"ari') is None)
+test("App name: rejects backtick", _sanitize_app_name("Saf`ari") is None)
+test("App name: rejects $", _sanitize_app_name("Saf$ari") is None)
+test("App name: rejects semicolon", _sanitize_app_name("Safari;rm") is None)
+test("App name: rejects pipe", _sanitize_app_name("Safari|cat") is None)
+test("App name: rejects path traversal", _sanitize_app_name("../etc") is None)
+test("App name: rejects slash", _sanitize_app_name("/bin/sh") is None)
+test("App name: rejects backslash", _sanitize_app_name("Saf\\ari") is None)
+test("App name: empty rejected", _sanitize_app_name("") is None)
+
+# ============================================================
+print()
+print("=" * 60)
+print("23. BOT.PY — NEW HANDLER REGISTRATION")
+print("=" * 60)
+
+src = inspect.getsource(bot.main)
+bot_src = inspect.getsource(bot)
+test("bot.py registers /getfile", "getfile_handler" in src)
+test("bot.py registers /app", "app_handler" in src)
+test("bot.py registers /sysinfo", "sysinfo_handler" in src)
+test("bot.py imports getfile_handler", "getfile_handler" in bot_src)
+test("bot.py imports app_handler", "app_handler" in bot_src)
+test("bot.py imports sysinfo_handler", "sysinfo_handler" in bot_src)
 
 # ============================================================
 print()

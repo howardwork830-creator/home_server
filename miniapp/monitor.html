@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Live Monitor</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--tg-theme-bg-color, #1a1a1a);
+    color: var(--tg-theme-text-color, #fff);
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+  }
+  #status {
+    padding: 8px 16px;
+    font-size: 14px;
+    width: 100%;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .dot-connecting { background: #f5a623; }
+  .dot-live { background: #4cd964; }
+  .dot-error { background: #ff3b30; }
+  #feed-container {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    overflow: hidden;
+  }
+  #feed {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  #controls {
+    padding: 12px;
+    width: 100%;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  button {
+    background: var(--tg-theme-button-color, #2481cc);
+    color: var(--tg-theme-button-text-color, #fff);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  button:active { opacity: 0.7; }
+  button.stop { background: #ff3b30; }
+</style>
+</head>
+<body>
+<div id="status">
+  <span class="status-dot dot-connecting" id="dot"></span>
+  <span id="status-text">Connecting...</span>
+</div>
+<div id="feed-container">
+  <img id="feed" alt="Screen feed">
+</div>
+<div id="controls">
+  <button id="btn" onclick="toggleStream()">Stop</button>
+  <button onclick="goFullscreen()">Fullscreen</button>
+</div>
+
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+  tg.ready();
+
+  const params = new URLSearchParams(window.location.search);
+  const server = params.get('server');
+  const feed = document.getElementById('feed');
+  const dot = document.getElementById('dot');
+  const statusText = document.getElementById('status-text');
+  const btn = document.getElementById('btn');
+  let streaming = false;
+  let timer = null;
+  let frameCount = 0;
+
+  function setStatus(state, text) {
+    dot.className = 'status-dot dot-' + state;
+    statusText.textContent = text;
+  }
+
+  function fetchFrame() {
+    if (!streaming) return;
+    const url = 'http://' + server + '/frame?' + Date.now();
+    const img = new Image();
+    img.onload = function() {
+      feed.src = img.src;
+      frameCount++;
+      setStatus('live', 'Live (' + frameCount + ' frames)');
+      if (streaming) timer = setTimeout(fetchFrame, 100);
+    };
+    img.onerror = function() {
+      setStatus('error', 'Connection lost');
+      if (streaming) timer = setTimeout(fetchFrame, 1000);
+    };
+    img.src = url;
+  }
+
+  function startStream() {
+    if (!server) {
+      setStatus('error', 'No server specified');
+      return;
+    }
+    streaming = true;
+    frameCount = 0;
+    btn.textContent = 'Stop';
+    btn.className = 'stop';
+    setStatus('connecting', 'Connecting...');
+    fetchFrame();
+  }
+
+  function stopStream() {
+    streaming = false;
+    if (timer) { clearTimeout(timer); timer = null; }
+    btn.textContent = 'Start';
+    btn.className = '';
+    setStatus('connecting', 'Stopped');
+  }
+
+  function toggleStream() {
+    if (streaming) { stopStream(); } else { startStream(); }
+  }
+
+  function goFullscreen() {
+    const el = document.getElementById('feed-container');
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  }
+
+  startStream();
+</script>
+</body>
+</html>
