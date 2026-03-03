@@ -9,7 +9,7 @@ KEYBOARD = ReplyKeyboardMarkup(
         ["Files", "Git"],
         ["Status", "tmux"],
         ["CD", "Chat"],
-        ["New Project"],
+        ["New Project", "Network"],
     ],
     resize_keyboard=True,
 )
@@ -19,6 +19,7 @@ HELP_TEXT = """Available commands:
 /start — Show main menu
 /help — This message
 /status — System status (uptime, disk, Tailscale)
+/network — Network diagnostics (IPs, connectivity, VPN)
 /claude <prompt> — Ask Claude a question
 /claude_continue <prompt> — Continue the last Claude conversation
 /tmux ls — List tmux sessions
@@ -28,12 +29,24 @@ HELP_TEXT = """Available commands:
 /chat — Enter Claude chat mode (back-and-forth coding)
 /exit — Leave chat mode
 
-Plain text — Executed as a shell command (allowlisted commands only)
+Plain text — Executed as a shell command (69 allowlisted commands)
 Document upload — Saved to the working directory
 
-Allowed shell commands: ls, pwd, cat, head, tail, grep, find, ps, df, uptime, echo, wc, sort, tree, which, file, du, date, whoami, python3, git, tmux, tailscale, claude
+Allowed shell commands (69):
 
-Dangerous commands (rm -rf, sudo, etc.) are blocked."""
+Core: ls, pwd, cat, head, tail, grep, find, echo, wc, sort, tree, which, file, du, date, whoami
+Dev: python3, npm, npx, git, tmux, claude
+Files: open
+System: ps, df, uptime, sw_vers, system_profiler, uname, hostname, top, pgrep, kill, killall
+Network: ping, traceroute, dig, nslookup, netstat, lsof, ifconfig, networksetup, networkQuality, curl, wget, tailscale
+Disk: diskutil, hdiutil, tmutil
+Packages: brew, softwareupdate, pkgutil, xcode-select
+Media: afplay, say, sips, screencapture
+Text: sed, awk, uniq, pbcopy, pbpaste
+Compression: tar, gzip, gunzip, zip, unzip
+Automation: shortcuts, caffeinate
+
+Dangerous commands (rm -rf, sudo, etc.) are blocked. Some commands require specific flags (e.g. ping -c, top -l)."""
 
 
 @authorized

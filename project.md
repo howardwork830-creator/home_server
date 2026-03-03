@@ -1,11 +1,12 @@
-# Mac M1 Home Server + Telegram Coding Bot
+# Mac M1 Home Server + Telegram Remote Admin Bot
 
 <!--
 AI AGENT CONTEXT:
-- This project runs a Telegram bot on a Mac M1 that enables remote coding via phone
-- Bot uses Claude for code generation, shell commands, Git, and file uploads
-- All traffic goes through Tailscale VPN
-- Key constraints: command allowlist, dangerous-pattern blocklist, Telegram 4096 char limit
+- This project runs a Telegram bot on a Mac M1 for comprehensive remote administration via phone
+- Bot uses Claude for code generation, 69 allowlisted shell commands, system/network/process/package management
+- All traffic goes through Tailscale VPN; visual monitoring via VNC over Tailscale
+- Key constraints: command allowlist with subcommand restrictions, dangerous-pattern blocklist, Telegram 4096 char limit
+- Reference: macOS-CLI-Guide.md contains the full macOS CLI command reference
 -->
 
 ---
@@ -14,7 +15,7 @@ AI AGENT CONTEXT:
 
 | Field | Value |
 |-------|-------|
-| **Purpose** | Remote coding server controlled from phone via Telegram, powered by Claude |
+| **Purpose** | Comprehensive remote Mac administration via Telegram — SSH-like control from phone, powered by Claude |
 | **Platform** | Mac M1 (Apple Silicon), macOS Ventura+ |
 | **Stack** | Python 3.12, python-telegram-bot v20+, Anthropic SDK, Tailscale VPN |
 | **Working Dir** | `/Users/howard/Desktop/VS code file/home server` |
@@ -26,24 +27,28 @@ AI AGENT CONTEXT:
 ## Architecture
 
 ```
-Phone (Telegram App)
-        │ HTTPS
-        ▼
-Telegram Bot API
-        │
-        ▼
-Mac M1 (Home)
-  ├── Tailscale VPN
+Phone (Telegram App)              VNC Client (iPhone/iPad/Mac)
+        │ HTTPS                           │ VNC over Tailscale
+        ▼                                 ▼
+Telegram Bot API                  macOS Screen Sharing
+        │                                 │
+        ▼                                 ▼
+Mac M1 (Home) ────────────────────────────────────
+  ├── Tailscale VPN (encrypted overlay network)
   ├── Telegram Bot (python-telegram-bot)
-  ├── Claude client (Anthropic SDK)
-  └── Shell / Git / tmux / tools
+  │   ├── Shell commands (69 allowlisted)
+  │   ├── System admin (disk, process, package, network)
+  │   └── Claude AI agent (coding assistant)
+  ├── Screen Sharing / VNC (full GUI access)
+  └── Shell / Git / brew / tmux / tools
 ```
 
-**Connectivity:** Tailscale (NAT traversal, secure overlay, no router config).  
-**UI:** Telegram bot (buttons + text).  
+**Connectivity:** Tailscale (NAT traversal, secure overlay, no router config).
+**UI:** Telegram bot (buttons + text) for command-line control; VNC for GUI access.
 **AI:** Claude as coding assistant.
+**Visual:** Full VNC over Tailscale for interactive GUI access.
 
-References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants), [python-telegram-bot](https://python-telegram-bot.org), [Anthropic API](https://dev.to/engineerdan/generating-python-code-using-anthropic-api-for-claude-ai-4ma4)
+References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants), [python-telegram-bot](https://python-telegram-bot.org), [Anthropic API](https://dev.to/engineerdan/generating-python-code-using-anthropic-api-for-claude-ai-4ma4), [macOS-CLI-Guide.md](macOS-CLI-Guide.md)
 
 ---
 
@@ -51,30 +56,45 @@ References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants
 
 ### Goals
 
-- Turn Mac M1 into 24/7 home dev server
-- Control entirely from phone via Telegram bot
-- Use Claude for code generation, refactoring, debugging, and “vibe coding”
+- Turn Mac M1 into 24/7 home administration server
+- SSH-like control entirely from phone via Telegram bot
+- Use Claude for code generation, refactoring, debugging, and "vibe coding"
+- Full system monitoring: processes, disk, network, VNC
+- Package management: Homebrew, macOS software updates
+- Seamless enough to feel like controlling a Linux machine from a terminal
 
 ### Supported Capabilities
 
 | Category | Commands / Features |
 |----------|---------------------|
-| **Shell** | `ls`, `pwd`, `cat`, `head`, `tail`, `grep`, `find`, `ps`, `df`, `uptime` (non-interactive only) |
-| **Git** | `git status`, `git add`, `git commit`, `git push` |
-| **Claude** | Code generation, refactoring, error explanation |
+| **Files & Navigation** | `ls`, `pwd`, `cat`, `head`, `tail`, `grep`, `find`, `echo`, `wc`, `sort`, `tree`, `which`, `file`, `du`, `open` |
+| **System Information** | `sw_vers`, `system_profiler`, `uname`, `hostname`, `date`, `whoami`, `uptime` |
+| **Network & Diagnostics** | `ping`, `traceroute`, `dig`, `nslookup`, `netstat`, `lsof`, `ifconfig`, `networksetup`, `networkQuality`, `curl`, `wget`, `tailscale` |
+| **Disk & Storage** | `df`, `diskutil`, `hdiutil`, `tmutil` |
+| **Process Management** | `ps`, `top` (batch mode), `pgrep`, `kill`, `killall` |
+| **Package Management** | `brew`, `softwareupdate`, `pkgutil`, `xcode-select` |
+| **Audio & Media** | `afplay`, `say`, `sips`, `screencapture` |
+| **Text Processing** | `sed`, `awk`, `uniq`, `pbcopy`, `pbpaste` |
+| **Compression** | `tar`, `gzip`, `gunzip`, `zip`, `unzip` |
+| **Automation** | `shortcuts`, `caffeinate` |
+| **Development** | `python3`, `git`, `npm`, `npx`, `claude` |
+| **Session Management** | `tmux` |
+| **Git** | `git status`, `git add`, `git commit`, `git push`, `git log`, `git diff`, `git branch` |
+| **Claude AI** | Code generation, refactoring, error explanation, file editing |
 | **Claude chat** | `/chat` for interactive back-and-forth coding; `/exit` to leave |
 | **Files** | Upload via Telegram → working dir; view via `cat` / `head` / `tail` |
 | **Directory** | `/cd` to switch project; `/newproject` to create new project folder |
-| **Status** | `df -h`, `uptime`, process/memory snapshots |
-| **tmux** | List sessions; send simple non-interactive commands |
+| **Visual Monitoring** | VNC over Tailscale for full GUI access |
 
 ### Hard Limits
 
 | Limit | Value |
 |-------|-------|
 | Telegram message size | 4096 chars (must chunk output) |
-| Command timeout | ~30 seconds (run long jobs in tmux) |
+| Command timeout | 300 seconds (run longer jobs in tmux) |
 | Interactive TUI | Not supported (no `vim`, `nano`, `htop` over Telegram) |
+| `top` command | Batch mode only (`-l 1`) — interactive mode not supported |
+| VNC access | Requires separate VNC client app; not integrated into Telegram |
 
 ---
 
@@ -86,15 +106,50 @@ References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants
 - Weak command validation → destructive commands (`rm -rf`, `sudo`, etc.)
 - Claude API key leak → API credit abuse
 - Tailscale misconfig → unintended exposure
+- Expanded command surface → more potential for abuse (mitigated by subcommand allowlists)
 
 ### Mitigations
 
 - **User whitelist:** `AUTHORIZED_USER_IDS` in `.env`; only listed users can use bot
-- **Allowlist:** Only base commands in `SAFE_COMMANDS` (e.g. `ls`, `git`, `python3`, `df`, `ps`, `tmux`, `tailscale`)
-- **Blocklist:** Regex patterns for `rm -rf`, `sudo rm`, `mkfs`, `chmod 777`, `reboot`, `shutdown`, etc.
-- **Working dir:** Bot runs in `/Users/howard/Desktop/VS code file/home server` only
+- **Allowlist:** 69 commands in `SAFE_COMMANDS`, each individually vetted for safety
+- **Subcommand allowlists:** Per-command restrictions (e.g., `git` limited to safe subcommands, `diskutil` limited to read-only operations)
+- **Argument injection defense:** Dangerous arguments blocked per-command (e.g., `find -exec`, `sort --compress-prog`)
+- **Blocklist:** Regex patterns for `rm -rf`, `sudo`, `mkfs`, `chmod 777`, `reboot`, `shutdown`, `launchctl`, etc.
+- **Working dir:** Bot runs in the configured `WORK_DIR`
 - **Secrets:** `.env` with `chmod 600`, never in Git
 - **Tailscale ACLs:** 2-device personal tailnet uses default ACLs (Mac + iPhone); acceptable for this threat model since both devices are owner-controlled
+
+### Deferred Commands (Risky — Future Consideration)
+
+| Command | Risk | Notes |
+|---------|------|-------|
+| `osascript` | AppleScript can execute arbitrary system actions | May add with sandboxed script allowlist |
+| `defaults write` | Can modify system preferences | Read-only `defaults read` may be added first |
+| `launchctl` | macOS service management | Needs its own subcommand allowlist |
+| `sudo` | Root access | Permanently blocked |
+| `dd`, `mkfs`, `reboot`, `shutdown` | Destructive operations | Permanently blocked |
+
+---
+
+## Visual Monitoring
+
+### Full GUI Access via VNC
+
+For interactive visual control, macOS built-in Screen Sharing runs over Tailscale:
+
+```
+iPhone/iPad/Mac ──── Tailscale tunnel (encrypted) ──── Mac M1
+   VNC Client                                        Screen Sharing
+```
+
+**Setup:**
+1. Enable Screen Sharing: System Settings → General → Sharing → Screen Sharing → On
+2. Connect from any tailnet device using the Mac's Tailscale IP (`vnc://100.94.x.x`)
+3. On iPhone/iPad: use a VNC client app (Screens, RealVNC, etc.)
+
+**When to use which:**
+- **Telegram bot** — Quick commands, status checks, file operations, coding with Claude
+- **VNC** — GUI-heavy tasks, visual debugging, app interactions requiring mouse/keyboard
 
 ---
 
@@ -163,19 +218,25 @@ sudo tailscale up
 tailscale ip -4    # Record IP (e.g. 100.94.x.x)
 ```
 
-### 3. Create Telegram Bot
+### 3. Enable Screen Sharing (VNC)
+
+1. System Settings → General → Sharing → Screen Sharing → On
+2. Set a VNC password when prompted
+3. Connect from tailnet devices using `vnc://<tailscale-ip>`
+
+### 4. Create Telegram Bot
 
 1. Telegram → `@BotFather` → `/newbot`
 2. Get `BOT_TOKEN`
 3. `/setprivacy` → Disable (so bot sees all messages)
 4. Get your `USER_ID` via `@userinfobot`
 
-### 4. Claude
+### 5. Claude
 
 - Anthropic console → create API key, enable billing
 - `pip3 install anthropic`
 
-### 5. Bot Dependencies
+### 6. Bot Dependencies
 
 ```bash
 cd "/Users/howard/Desktop/VS code file/home server"
@@ -206,14 +267,15 @@ pip3 install python-telegram-bot anthropic aiofiles python-dotenv
 | `/exit` | Leave chat mode |
 | `/cd` | Select a project directory from Desktop folders |
 | `/newproject <name>` | Create a new project folder on Desktop and switch to it |
+| `/network` | Run network diagnostics (interfaces, public IP, connectivity) |
 | Plain text | Treated as shell command (allowlist + blocklist); routed to Claude in chat mode |
 | Document | Save to `WORK_DIR`, confirm path |
 
 ### Safety Logic
 
-- Parse command → check base command in `SAFE_COMMANDS` → check against `DANGEROUS_PATTERNS` regex
+- Parse command → check base command in `SAFE_COMMANDS` (69 commands) → check per-command argument restrictions → check against `DANGEROUS_PATTERNS` regex
 - `os.chdir(WORK_DIR)` before running
-- Async subprocess with timeout; group kill on timeout
+- Async subprocess with timeout (300s); group kill on timeout
 - Output split into ≤ 4000-char chunks for Telegram
 
 ---
@@ -273,6 +335,7 @@ launchctl list | grep telegrambot
 3. `/status` → check disk, uptime
 4. `/claude <prompt>` for coding help
 5. Run commands: `python3 main.py`, `git status`, etc.
+6. Open VNC client for full visual control when needed
 
 ### Command Cheat Sheet
 
@@ -283,12 +346,36 @@ ls -la | pwd | cat file | head -50 log | tail -50 log | tree -L 2
 # Git
 git status | git add . | git commit -m "msg" | git push
 
-# System
-df -h | uptime | tailscale status | ps aux --sort=-%mem | head -10
+# System Info
+sw_vers | system_profiler SPHardwareDataType | uname -a | uptime | whoami
+
+# Network
+ping -c 4 google.com | traceroute 8.8.8.8 | dig example.com
+networkQuality | ifconfig en0 | netstat -an | lsof -i :8080
+tailscale status
+
+# Disk & Storage
+df -h | diskutil list | du -sh * | tmutil listbackups
+
+# Processes
+ps aux | pgrep -l python | top -l 1 -n 10 | kill 12345
+
+# Packages
+brew update | brew list | brew install <pkg> | softwareupdate -l
+
+# Audio & Media
+say "hello" | screencapture -x /tmp/screen.png | sips --getProperty pixelWidth img.png
+
+# Compression
+tar czf archive.tar.gz dir/ | unzip file.zip | gzip file.txt
+
+# Automation
+caffeinate -t 3600 | shortcuts list
 
 # Claude
 /claude 幫我重構這段程式碼
 /claude 解釋這個錯誤訊息
+
 ```
 
 ---
@@ -306,7 +393,11 @@ df -h | uptime | tailscale status | ps aux --sort=-%mem | head -10
 
 | Can | Cannot |
 |-----|--------|
-| Remote coding via phone + Claude | Full interactive TUI (vim, htop) over Telegram |
-| Most daily dev tasks (code, run, commit, push) | Zero security risk (deliberate remote command surface) |
+| Remote admin via phone — shell, files, git, processes, packages, network | Full interactive TUI (vim, htop) over Telegram |
+| Full GUI control via VNC over Tailscale | Stream live video/screen over Telegram |
+| Full GUI control via VNC over Tailscale | VNC integrated into Telegram (requires separate client) |
+| Most daily dev + sysadmin tasks | Zero security risk (deliberate remote command surface) |
+| Install/update packages via Homebrew | Run arbitrary scripts without allowlist approval |
+| Monitor and kill processes | Run `sudo` or modify system-level settings |
 
-**Trade-off:** Convenience vs. complexity + residual risk. Design reduces risk but does not eliminate it.
+**Trade-off:** Convenience vs. complexity + residual risk. Design reduces risk but does not eliminate it. The expanded command set increases the attack surface but each command is individually vetted, and subcommand allowlists limit what can be done with powerful tools.

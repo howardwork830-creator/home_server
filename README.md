@@ -1,14 +1,21 @@
-# Mac M1 Home Server — Telegram Bot
+# Mac M1 Home Server — Telegram Remote Admin
 
-A Telegram bot for remote control of a Mac M1 home server. Execute shell commands, run Claude AI coding sessions, upload files, manage tmux sessions, and monitor system status — all from Telegram.
+A Telegram bot for comprehensive remote administration of a Mac M1 home server. Execute shell commands, manage system resources, run Claude AI coding sessions, monitor network status, control packages and processes — all from Telegram.
 
 ## Features
 
-- **Shell commands** — Run allowlisted commands (`ls`, `git status`, `python3 script.py`, etc.) with input validation and output scrubbing
+- **Shell commands** — Run allowlisted commands (`ls`, `git status`, `python3 script.py`, `brew update`, etc.) with input validation and output scrubbing
+- **System administration** — Check disk usage, system info, process management, package updates
+- **Network diagnostics** — Ping, traceroute, DNS lookups, interface info, connection quality testing
 - **Claude AI agent** — Full coding assistant that can read, edit, and create files with controlled permissions
 - **Claude chat mode** — `/chat` enters interactive back-and-forth coding with Claude; `/exit` to leave
+- **Visual monitoring** — macOS Screen Sharing (VNC) over Tailscale for full GUI access
 - **File uploads** — Send documents to save them to the working directory
 - **Directory switching** — `/cd` to pick a project folder on Desktop; `/newproject` to create one
+- **Process management** — List, search, and kill processes
+- **Package management** — Homebrew operations, macOS software updates
+- **Audio & media** — Text-to-speech, image processing, audio playback
+- **Compression** — Archive and extract files (tar, zip, gzip)
 - **Tmux control** — List and send commands to tmux sessions
 - **System status** — Uptime, disk usage, and Tailscale status
 - **Command menu** — Type `/` in Telegram to see all available commands
@@ -65,6 +72,7 @@ python3 bot.py
 | `/cd` | Select a project directory (Desktop folders) |
 | `/newproject <name>` | Create a new project folder on Desktop |
 | `/status` | System status (uptime, disk, Tailscale) |
+| `/network` | Network diagnostics (interfaces, public IP, connectivity) |
 | `/tmux ls` | List tmux sessions |
 | `/tmux send <session> <cmd>` | Send a command to a tmux session |
 | *plain text* | Execute as a shell command |
@@ -89,6 +97,18 @@ Claude **cannot**:
 
 After a `/claude` session, use `/claude_continue <follow-up>` to resume the same conversation. The session ID is stored per-user.
 
+## Visual Monitoring
+
+### Full GUI Access via VNC
+
+For interactive visual control, use macOS built-in Screen Sharing over Tailscale:
+
+1. **Enable Screen Sharing** on the Mac: System Settings → General → Sharing → Screen Sharing → On
+2. **Connect via Tailscale IP**: From any device on your tailnet, open a VNC client and connect to the Mac's Tailscale IP (e.g., `vnc://100.94.x.x`)
+3. **On iPhone/iPad**: Use a VNC client app (e.g., Screens, RealVNC) pointing to the Tailscale IP
+
+This gives full mouse/keyboard GUI control — useful for tasks that require visual interaction beyond what Telegram text commands can provide. Traffic is encrypted end-to-end by Tailscale.
+
 ## Security
 
 ### Defense Layers
@@ -96,7 +116,8 @@ After a `/claude` session, use `/claude_continue <follow-up>` to resume the same
 | Layer | What it does |
 |---|---|
 | **User authorization** | Only Telegram user IDs in `AUTHORIZED_USER_IDS` can interact |
-| **Command allowlist** | Only 24 safe commands can be executed |
+| **Command allowlist** | Only 69 vetted commands can be executed |
+| **Subcommand allowlists** | Per-command restrictions (e.g., only safe `git` and `diskutil` subcommands) |
 | **Shell metacharacter blocking** | `;`, `&&`, `\|\|`, `` ` ``, `$(`, `<(`, `>(` are rejected |
 | **Argument injection defense** | `find -exec`, `sort --compress-prog`, `grep --pre`, `python3 -c` blocked |
 | **Path guard** | Arguments resolving to sensitive paths are rejected |
@@ -109,6 +130,15 @@ After a `/claude` session, use `/claude_continue <follow-up>` to resume the same
 | **Rate limiting** | 20 shell commands/minute, 5 Claude requests/minute per user |
 | **Output size cap** | Truncate at 50KB to prevent memory issues and Telegram spam |
 | **Audit log** | Every action logged to `audit.jsonl` (never logs command output) |
+
+### Deferred (Risky) Commands
+
+These commands are intentionally **not** in the allowlist due to their risk profile. They may be added in the future with appropriate safeguards:
+
+- `osascript` — AppleScript can execute arbitrary system actions
+- `defaults write` — Can modify system preferences (read-only `defaults read` may be added)
+- `launchctl` — macOS service management (needs its own subcommand allowlist)
+- `sudo`, `dd`, `mkfs`, `reboot`, `shutdown` — Permanently blocked
 
 ### Blocked Sensitive Paths
 
@@ -157,6 +187,7 @@ home server/
 │   ├── newproject.py          # /newproject project creation handler
 │   ├── shell.py               # Shell command validation and execution
 │   ├── files.py               # File upload handler
+│   ├── network.py             # /network diagnostics handler
 │   ├── start.py               # /start and /help handlers
 │   ├── status.py              # /status handler
 │   └── tmux.py                # /tmux handler
@@ -172,9 +203,76 @@ home server/
 
 ## Allowed Shell Commands
 
+### Files & Navigation
+
 ```
-ls, pwd, cat, head, tail, grep, find, ps, df, uptime, echo, wc, sort,
-tree, which, file, du, date, whoami, python3, git, tmux, tailscale, claude
+ls, pwd, cat, head, tail, grep, find, echo, wc, sort, tree, which, file, du, open
+```
+
+### System Information
+
+```
+sw_vers, system_profiler, uname, hostname, date, whoami, uptime
+```
+
+### Network & Diagnostics
+
+```
+ping, traceroute, dig, nslookup, netstat, lsof, ifconfig, networksetup, networkQuality, curl, wget, tailscale
+```
+
+### Disk & Storage
+
+```
+df, diskutil, hdiutil, tmutil
+```
+
+### Process Management
+
+```
+ps, top (batch mode only), pgrep, kill, killall
+```
+
+### Package Management
+
+```
+brew, softwareupdate, pkgutil, xcode-select
+```
+
+### Audio & Media
+
+```
+afplay, say, sips, screencapture
+```
+
+### Text Processing
+
+```
+sed, awk, uniq, pbcopy, pbpaste
+```
+
+### Compression
+
+```
+tar, gzip, gunzip, zip, unzip
+```
+
+### Automation
+
+```
+shortcuts, caffeinate
+```
+
+### Development
+
+```
+python3, git, npm, npx, claude
+```
+
+### Session Management
+
+```
+tmux
 ```
 
 Pipes (`|`) are supported between allowlisted commands. All other shell operators are blocked.
@@ -185,4 +283,4 @@ Pipes (`|`) are supported between allowlisted commands. All other shell operator
 python3 test_security.py
 ```
 
-Runs 173 tests covering all security layers: metacharacter blocking, argument injection defense, path guards, output scrubbing, rate limiting, audit logging, stream parsing, output capping, and command validation.
+Runs 362 tests covering all security layers: metacharacter blocking, argument injection defense, path guards, output scrubbing, rate limiting, audit logging, stream parsing, output capping, and command validation.

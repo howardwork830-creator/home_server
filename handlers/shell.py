@@ -7,8 +7,9 @@ from telegram.ext import ContextTypes
 from config import (
     DANGEROUS_ARGS,
     DANGEROUS_PATTERNS,
+    REQUIRED_ARGS,
     SAFE_COMMANDS,
-    ALLOWED_GIT_SUBCOMMANDS,
+    SUBCOMMAND_ALLOWLISTS,
     SHELL_METACHARACTERS,
     logger,
 )
@@ -41,6 +42,17 @@ def _check_dangerous_args(base_cmd: str, parts: list[str]) -> str | None:
         for bad in blocked:
             if arg == bad or arg.startswith(bad + "=") or arg.startswith(bad + " "):
                 return f"Blocked: argument `{arg}` is not allowed for `{base_cmd}`."
+    return None
+
+
+def _check_required_args(base_cmd: str, parts: list[str]) -> str | None:
+    """Ensure commands that need specific flags have them (prevents hangs)."""
+    req = REQUIRED_ARGS.get(base_cmd)
+    if not req:
+        return None
+    flag = req["flag"]
+    if not any(arg == flag or arg.startswith(flag) for arg in parts[1:]):
+        return req["error"]
     return None
 
 
@@ -84,15 +96,19 @@ def validate_command(command: str) -> str | None:
         if arg_err:
             return arg_err
 
-        # 6. Git subcommand validation
-        if base_cmd == "git":
+        # 6. Required args check (prevent hangs)
+        req_err = _check_required_args(base_cmd, parts)
+        if req_err:
+            return req_err
+
+        # 7. Subcommand/flag allowlist validation
+        if base_cmd in SUBCOMMAND_ALLOWLISTS:
             if len(parts) < 2:
-                return "git requires a subcommand."
-            subcommand = parts[1]
-            if subcommand not in ALLOWED_GIT_SUBCOMMANDS:
+                return f"`{base_cmd}` requires a subcommand or flag."
+            if parts[1] not in SUBCOMMAND_ALLOWLISTS[base_cmd]:
                 return (
-                    f"git subcommand `{subcommand}` is not allowed. "
-                    f"Allowed: {', '.join(sorted(ALLOWED_GIT_SUBCOMMANDS))}"
+                    f"`{base_cmd}` subcommand `{parts[1]}` is not allowed. "
+                    f"Allowed: {', '.join(sorted(SUBCOMMAND_ALLOWLISTS[base_cmd]))}"
                 )
 
     return None
@@ -117,6 +133,7 @@ async def shell_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "CD": "Use /cd to select a project directory on Desktop.",
         "Chat": "Use /chat to enter Claude chat mode for back-and-forth coding.",
         "New Project": "Use /newproject <name> to create a new project folder on Desktop.",
+        "Network": "Use /network to see network diagnostics (IPs, connectivity, VPN).",
     }
     if command in button_hints:
         await update.message.reply_text(button_hints[command])

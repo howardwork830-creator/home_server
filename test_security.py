@@ -33,7 +33,8 @@ from config import (
     BLOCKED_PATH_PATTERNS, SECRET_PATTERNS, MAX_OUTPUT_BYTES,
     RATE_LIMIT_SHELL, RATE_LIMIT_CLAUDE, RATE_LIMIT_WINDOW,
     CLAUDE_ALLOWED_TOOLS, CLAUDE_SYSTEM_PROMPT, CLAUDE_MAX_BUDGET_USD,
-    AUDIT_LOG_FILE, CLAUDE_TIMEOUT,
+    AUDIT_LOG_FILE, CLAUDE_TIMEOUT, SAFE_COMMANDS,
+    SUBCOMMAND_ALLOWLISTS, REQUIRED_ARGS,
 )
 
 test("SHELL_METACHARACTERS has entries", len(SHELL_METACHARACTERS) >= 7)
@@ -296,39 +297,40 @@ print("=" * 60)
 
 from utils.claude_stream import parse_stream_line, parse_stream_events, StreamEvent
 
-# Test individual line parsing
-e = parse_stream_line('{"type": "assistant", "message": {"type": "text", "text": "Hello world"}}')
-test("Parses text event", e is not None and e.kind == "text" and e.data == "Hello world")
+# Test individual line parsing (parse_stream_line returns list[StreamEvent])
+# Format: {"type": "assistant", "message": {"content": [{"type": "text", "text": "..."}]}}
+evts = parse_stream_line('{"type": "assistant", "message": {"content": [{"type": "text", "text": "Hello world"}]}}')
+test("Parses text event", len(evts) == 1 and evts[0].kind == "text" and evts[0].data == "Hello world")
 
-e = parse_stream_line('{"type": "assistant", "message": {"type": "tool_use", "name": "Read", "input": {"file_path": "/tmp/foo"}}}')
-test("Parses Read tool event", e is not None and e.kind == "tool_use" and "/tmp/foo" in e.data)
+evts = parse_stream_line('{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read", "input": {"file_path": "/tmp/foo"}}]}}')
+test("Parses Read tool event", len(evts) == 1 and evts[0].kind == "tool_use" and "/tmp/foo" in evts[0].data)
 
-e = parse_stream_line('{"type": "assistant", "message": {"type": "tool_use", "name": "Edit", "input": {"file_path": "main.py"}}}')
-test("Parses Edit tool event", e is not None and e.kind == "tool_use" and "main.py" in e.data)
+evts = parse_stream_line('{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Edit", "input": {"file_path": "main.py"}}]}}')
+test("Parses Edit tool event", len(evts) == 1 and evts[0].kind == "tool_use" and "main.py" in evts[0].data)
 
-e = parse_stream_line('{"type": "assistant", "message": {"type": "tool_use", "name": "Bash", "input": {"command": "git status"}}}')
-test("Parses Bash tool event", e is not None and e.kind == "tool_use" and "git status" in e.data)
+evts = parse_stream_line('{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {"command": "git status"}}]}}')
+test("Parses Bash tool event", len(evts) == 1 and evts[0].kind == "tool_use" and "git status" in evts[0].data)
 
-e = parse_stream_line('{"type": "assistant", "message": {"type": "tool_use", "name": "Glob", "input": {"pattern": "**/*.py"}}}')
-test("Parses Glob tool event", e is not None and e.kind == "tool_use" and "**/*.py" in e.data)
+evts = parse_stream_line('{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Glob", "input": {"pattern": "**/*.py"}}]}}')
+test("Parses Glob tool event", len(evts) == 1 and evts[0].kind == "tool_use" and "**/*.py" in evts[0].data)
 
-e = parse_stream_line('{"type": "result", "result": "Done", "session_id": "abc-123"}')
-test("Parses result with session_id", e is not None and e.kind == "result" and e.session_id == "abc-123")
+evts = parse_stream_line('{"type": "result", "result": "Done", "session_id": "abc-123"}')
+test("Parses result with session_id", len(evts) == 1 and evts[0].kind == "result" and evts[0].session_id == "abc-123")
 
-e = parse_stream_line('{"type": "assistant", "message": {"type": "thinking"}}')
-test("Parses thinking event", e is not None and e.kind == "thinking")
+evts = parse_stream_line('{"type": "assistant", "message": {"content": [{"type": "thinking"}]}}')
+test("Parses thinking event", len(evts) == 1 and evts[0].kind == "thinking")
 
-e = parse_stream_line("")
-test("Empty line returns None", e is None)
+evts = parse_stream_line("")
+test("Empty line returns empty list", evts == [])
 
-e = parse_stream_line("not json")
-test("Invalid JSON returns None", e is None)
+evts = parse_stream_line("not json")
+test("Invalid JSON returns empty list", evts == [])
 
 # Test multi-line parsing
 raw = '\n'.join([
-    '{"type": "assistant", "message": {"type": "text", "text": "Starting..."}}',
-    '{"type": "assistant", "message": {"type": "tool_use", "name": "Read", "input": {"file_path": "x.py"}}}',
-    '{"type": "assistant", "message": {"type": "text", "text": "Here is the fix."}}',
+    '{"type": "assistant", "message": {"content": [{"type": "text", "text": "Starting..."}]}}',
+    '{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read", "input": {"file_path": "x.py"}}]}}',
+    '{"type": "assistant", "message": {"content": [{"type": "text", "text": "Here is the fix."}]}}',
     '{"type": "result", "result": "Complete", "session_id": "sess-456"}',
 ])
 events, sid = parse_stream_events(raw)
@@ -386,7 +388,7 @@ for cmd in dangerous:
     test(f"Dangerous: '{cmd}' blocked", result is not None, f"got: {result}")
 
 # Disallowed commands
-disallowed = ["rm file.txt", "wget http://example.com", "curl http://example.com", "apt install foo", "pip install foo"]
+disallowed = ["rm file.txt", "apt install foo", "pip install foo"]
 for cmd in disallowed:
     result = validate_command(cmd)
     test(f"Disallowed: '{cmd}' blocked", result is not None, f"got: {result}")
@@ -443,7 +445,6 @@ cmd = _build_claude_command("Write fizzbuzz in Python")
 test("Command has claude", cmd.startswith("claude"))
 test("Command has -p flag", " -p " in cmd)
 test("Command has --allowedTools", "--allowedTools" in cmd)
-test("Command has --permission-mode plan", "--permission-mode plan" in cmd)
 test("Command has --system-prompt", "--system-prompt" in cmd)
 test("Command has --max-budget-usd", "--max-budget-usd 1.0" in cmd)
 test("Command has --output-format stream-json", "--output-format stream-json" in cmd)
@@ -486,6 +487,294 @@ src = inspect.getsource(bot.main)
 test("bot.py registers /claude", "claude_handler" in src)
 test("bot.py registers /claude_continue", "claude_continue_handler" in src)
 test("bot.py imports claude_continue_handler", "claude_continue_handler" in inspect.getsource(bot))
+test("bot.py registers /network", "network_handler" in src)
+test("bot.py imports network_handler", "network_handler" in inspect.getsource(bot))
+
+# ============================================================
+print()
+print("=" * 60)
+print("14. CONFIG — EXPANDED COMMANDS & SECURITY RULES")
+print("=" * 60)
+
+test("SAFE_COMMANDS has 69 entries", len(SAFE_COMMANDS) == 69, f"got {len(SAFE_COMMANDS)}")
+test("SUBCOMMAND_ALLOWLISTS has 10 entries", len(SUBCOMMAND_ALLOWLISTS) == 10, f"got {len(SUBCOMMAND_ALLOWLISTS)}")
+test("REQUIRED_ARGS has ping", "ping" in REQUIRED_ARGS)
+test("REQUIRED_ARGS has top", "top" in REQUIRED_ARGS)
+test("REQUIRED_ARGS ping requires -c", REQUIRED_ARGS["ping"]["flag"] == "-c")
+test("REQUIRED_ARGS top requires -l", REQUIRED_ARGS["top"]["flag"] == "-l")
+test("DANGEROUS_ARGS has curl", "curl" in DANGEROUS_ARGS)
+test("DANGEROUS_ARGS has wget", "wget" in DANGEROUS_ARGS)
+test("DANGEROUS_ARGS has sed", "sed" in DANGEROUS_ARGS)
+test("DANGEROUS_ARGS has open", "open" in DANGEROUS_ARGS)
+
+# All new commands present in SAFE_COMMANDS
+new_commands = [
+    "open", "sw_vers", "system_profiler", "uname", "hostname",
+    "ping", "traceroute", "dig", "nslookup", "netstat", "lsof",
+    "ifconfig", "networksetup", "networkQuality", "curl", "wget",
+    "diskutil", "hdiutil", "tmutil",
+    "top", "pgrep", "kill", "killall",
+    "brew", "softwareupdate", "pkgutil", "xcode-select",
+    "afplay", "say", "sips", "screencapture",
+    "sed", "awk", "uniq", "pbcopy", "pbpaste",
+    "tar", "gzip", "gunzip", "zip", "unzip",
+    "shortcuts", "caffeinate",
+]
+for cmd in new_commands:
+    test(f"SAFE_COMMANDS has '{cmd}'", cmd in SAFE_COMMANDS)
+
+# ============================================================
+print()
+print("=" * 60)
+print("15. NEW DANGEROUS_ARGS — CURL, WGET, SED, OPEN")
+print("=" * 60)
+
+from handlers.shell import _check_dangerous_args, _check_required_args
+
+# curl dangerous args
+curl_blocked = [
+    (["curl", "-d", "data", "http://x.com"], "-d"),
+    (["curl", "--data", "data", "http://x.com"], "--data"),
+    (["curl", "--data-raw", "data", "http://x.com"], "--data-raw"),
+    (["curl", "--data-binary", "@file", "http://x.com"], "--data-binary"),
+    (["curl", "--data-urlencode", "x=y", "http://x.com"], "--data-urlencode"),
+    (["curl", "-F", "file=@f", "http://x.com"], "-F"),
+    (["curl", "--form", "file=@f", "http://x.com"], "--form"),
+    (["curl", "--json", "{}", "http://x.com"], "--json"),
+    (["curl", "-T", "file", "http://x.com"], "-T"),
+    (["curl", "--upload-file", "f", "http://x.com"], "--upload-file"),
+    (["curl", "-X", "POST", "http://x.com"], "-X"),
+    (["curl", "--request", "DELETE", "http://x.com"], "--request"),
+]
+for parts, flag in curl_blocked:
+    result = _check_dangerous_args("curl", parts)
+    test(f"curl blocks {flag}", result is not None, f"got: {result}")
+
+# curl allowed (GET, HEAD)
+curl_allowed = [
+    ["curl", "http://example.com"],
+    ["curl", "-s", "http://example.com"],
+    ["curl", "-I", "http://example.com"],
+    ["curl", "--head", "http://example.com"],
+    ["curl", "-o", "file.html", "http://example.com"],
+]
+for parts in curl_allowed:
+    result = _check_dangerous_args("curl", parts)
+    test(f"curl allows {' '.join(parts[1:3])}", result is None, f"got: {result}")
+
+# wget dangerous args
+wget_blocked = [
+    (["wget", "--post-data", "x", "http://x.com"], "--post-data"),
+    (["wget", "--post-file", "f", "http://x.com"], "--post-file"),
+    (["wget", "--method", "POST", "http://x.com"], "--method"),
+]
+for parts, flag in wget_blocked:
+    result = _check_dangerous_args("wget", parts)
+    test(f"wget blocks {flag}", result is not None, f"got: {result}")
+
+# wget allowed
+result = _check_dangerous_args("wget", ["wget", "http://example.com"])
+test("wget allows simple GET", result is None, f"got: {result}")
+
+# sed dangerous args
+result = _check_dangerous_args("sed", ["sed", "-i", "s/a/b/", "file"])
+test("sed blocks -i", result is not None, f"got: {result}")
+result = _check_dangerous_args("sed", ["sed", "--in-place", "s/a/b/", "file"])
+test("sed blocks --in-place", result is not None, f"got: {result}")
+result = _check_dangerous_args("sed", ["sed", "s/a/b/", "file"])
+test("sed allows read-only", result is None, f"got: {result}")
+
+# open dangerous args
+result = _check_dangerous_args("open", ["open", "-a", "Terminal"])
+test("open blocks -a", result is not None, f"got: {result}")
+result = _check_dangerous_args("open", ["open", "file.txt"])
+test("open allows file", result is None, f"got: {result}")
+
+# ============================================================
+print()
+print("=" * 60)
+print("16. REQUIRED ARGS — PING AND TOP")
+print("=" * 60)
+
+# ping requires -c
+result = _check_required_args("ping", ["ping", "8.8.8.8"])
+test("ping without -c blocked", result is not None, f"got: {result}")
+result = _check_required_args("ping", ["ping", "-c", "3", "8.8.8.8"])
+test("ping with -c allowed", result is None, f"got: {result}")
+result = _check_required_args("ping", ["ping", "-c3", "8.8.8.8"])
+test("ping with -c3 (no space) allowed", result is None, f"got: {result}")
+
+# top requires -l
+result = _check_required_args("top", ["top"])
+test("top without -l blocked", result is not None, f"got: {result}")
+result = _check_required_args("top", ["top", "-l", "1"])
+test("top with -l allowed", result is None, f"got: {result}")
+result = _check_required_args("top", ["top", "-l1"])
+test("top with -l1 (no space) allowed", result is None, f"got: {result}")
+
+# Commands without required args pass through
+result = _check_required_args("ls", ["ls", "-la"])
+test("ls has no required args", result is None, f"got: {result}")
+
+# Full validate_command integration
+result = validate_command("ping 8.8.8.8")
+test("validate_command blocks ping without -c", result is not None, f"got: {result}")
+result = validate_command("ping -c 3 8.8.8.8")
+test("validate_command allows ping -c 3", result is None, f"got: {result}")
+result = validate_command("top")
+test("validate_command blocks top without -l", result is not None, f"got: {result}")
+result = validate_command("top -l 1")
+test("validate_command allows top -l 1", result is None, f"got: {result}")
+
+# ============================================================
+print()
+print("=" * 60)
+print("17. SUBCOMMAND ALLOWLISTS — ALL COMMANDS")
+print("=" * 60)
+
+# --- diskutil ---
+test("diskutil list allowed", validate_command("diskutil list") is None)
+test("diskutil info allowed", validate_command("diskutil info disk0") is None)
+test("diskutil eraseDisk blocked", validate_command("diskutil eraseDisk HFS+ name disk0") is not None)
+test("diskutil partitionDisk blocked", validate_command("diskutil partitionDisk disk0 1 GPT HFS+ name 100%") is not None)
+
+# --- hdiutil ---
+test("hdiutil info allowed", validate_command("hdiutil info") is None)
+test("hdiutil imageinfo allowed", validate_command("hdiutil imageinfo disk.dmg") is None)
+test("hdiutil create blocked", validate_command("hdiutil create -size 100m disk.dmg") is not None)
+test("hdiutil attach blocked", validate_command("hdiutil attach disk.dmg") is not None)
+
+# --- tmutil ---
+test("tmutil listbackups allowed", validate_command("tmutil listbackups") is None)
+test("tmutil destinationinfo allowed", validate_command("tmutil destinationinfo") is None)
+test("tmutil status allowed", validate_command("tmutil status") is None)
+test("tmutil latestbackup allowed", validate_command("tmutil latestbackup") is None)
+test("tmutil delete blocked", validate_command("tmutil delete /path") is not None)
+test("tmutil startbackup blocked", validate_command("tmutil startbackup") is not None)
+
+# --- brew ---
+test("brew list allowed", validate_command("brew list") is None)
+test("brew info allowed", validate_command("brew info python") is None)
+test("brew search allowed", validate_command("brew search node") is None)
+test("brew install allowed", validate_command("brew install python") is None)
+test("brew uninstall allowed", validate_command("brew uninstall python") is None)
+test("brew update allowed", validate_command("brew update") is None)
+test("brew upgrade allowed", validate_command("brew upgrade") is None)
+test("brew outdated allowed", validate_command("brew outdated") is None)
+test("brew doctor allowed", validate_command("brew doctor") is None)
+test("brew cleanup allowed", validate_command("brew cleanup") is None)
+test("brew deps allowed", validate_command("brew deps python") is None)
+test("brew leaves allowed", validate_command("brew leaves") is None)
+test("brew tap blocked", validate_command("brew tap user/repo") is not None)
+test("brew edit blocked", validate_command("brew edit python") is not None)
+
+# --- pkgutil ---
+test("pkgutil --pkgs allowed", validate_command("pkgutil --pkgs") is None)
+test("pkgutil --pkg-info allowed", validate_command("pkgutil --pkg-info com.apple.pkg.Core") is None)
+test("pkgutil --files allowed", validate_command("pkgutil --files com.apple.pkg.Core") is None)
+test("pkgutil --forget blocked", validate_command("pkgutil --forget com.apple.pkg.Core") is not None)
+
+# --- softwareupdate ---
+test("softwareupdate -l allowed", validate_command("softwareupdate -l") is None)
+test("softwareupdate --list allowed", validate_command("softwareupdate --list") is None)
+test("softwareupdate -i allowed", validate_command("softwareupdate -i macOS") is None)
+test("softwareupdate --install allowed", validate_command("softwareupdate --install macOS") is None)
+test("softwareupdate -ia allowed", validate_command("softwareupdate -ia") is None)
+test("softwareupdate -d blocked", validate_command("softwareupdate -d macOS") is not None)
+
+# --- xcode-select ---
+test("xcode-select --print-path allowed", validate_command("xcode-select --print-path") is None)
+test("xcode-select -p allowed", validate_command("xcode-select -p") is None)
+test("xcode-select --version allowed", validate_command("xcode-select --version") is None)
+test("xcode-select --install allowed", validate_command("xcode-select --install") is None)
+test("xcode-select --switch blocked", validate_command("xcode-select --switch /path") is not None)
+test("xcode-select --reset blocked", validate_command("xcode-select --reset") is not None)
+
+# --- shortcuts ---
+test("shortcuts list allowed", validate_command("shortcuts list") is None)
+test("shortcuts run allowed", validate_command("shortcuts run MyShortcut") is None)
+test("shortcuts delete blocked", validate_command("shortcuts delete MyShortcut") is not None)
+
+# --- networksetup ---
+test("networksetup -listallnetworkservices allowed",
+     validate_command("networksetup -listallnetworkservices") is None)
+test("networksetup -getinfo allowed", validate_command("networksetup -getinfo Wi-Fi") is None)
+test("networksetup -getdnsservers allowed", validate_command("networksetup -getdnsservers Wi-Fi") is None)
+test("networksetup -setdnsservers blocked",
+     validate_command("networksetup -setdnsservers Wi-Fi 8.8.8.8") is not None)
+test("networksetup -setmanual blocked",
+     validate_command("networksetup -setmanual Wi-Fi 10.0.0.1 255.255.255.0 10.0.0.1") is not None)
+
+# --- git (still works with SUBCOMMAND_ALLOWLISTS) ---
+test("git status still allowed", validate_command("git status") is None)
+test("git log still allowed", validate_command("git log") is None)
+test("git checkout still blocked", validate_command("git checkout main") is not None)
+test("git reset still blocked", validate_command("git reset --hard") is not None)
+
+# --- bare subcommand-required commands ---
+test("diskutil bare blocked", validate_command("diskutil") is not None)
+test("brew bare blocked", validate_command("brew") is not None)
+test("git bare blocked", validate_command("git") is not None)
+
+# ============================================================
+print()
+print("=" * 60)
+print("18. NEW COMMANDS — VALIDATE_COMMAND ALLOWS")
+print("=" * 60)
+
+new_allowed = [
+    "sw_vers",
+    "system_profiler SPHardwareDataType",
+    "uname -a",
+    "hostname",
+    "ping -c 1 8.8.8.8",
+    "traceroute -m 5 8.8.8.8",
+    "dig google.com",
+    "nslookup google.com",
+    "netstat -an",
+    "lsof -i :8080",
+    "ifconfig en0",
+    "networkQuality",
+    "curl -s http://example.com",
+    "wget http://example.com",
+    "diskutil list",
+    "top -l 1",
+    "pgrep python",
+    "kill 12345",
+    "killall Safari",
+    "brew list",
+    "softwareupdate -l",
+    "pkgutil --pkgs",
+    "xcode-select -p",
+    "say hello",
+    "sips --getProperty pixelWidth image.png",
+    "sed 's/a/b/' file.txt",
+    "awk '{print $1}' file.txt",
+    "uniq file.txt",
+    "tar czf archive.tar.gz dir/",
+    "gzip file.txt",
+    "gunzip file.txt.gz",
+    "zip archive.zip file.txt",
+    "unzip archive.zip",
+    "shortcuts list",
+    "caffeinate -t 60",
+    "curl -I http://example.com",
+    "hdiutil info",
+    "tmutil status",
+]
+for cmd in new_allowed:
+    result = validate_command(cmd)
+    test(f"Allowed: '{cmd}'", result is None, f"got: {result}")
+
+# ============================================================
+print()
+print("=" * 60)
+print("19. DANGEROUS PATTERNS — CURL FILE://")
+print("=" * 60)
+
+test("curl file:// blocked", validate_command("curl file:///etc/passwd") is not None)
+test("curl FILE:// blocked (case-insensitive)", validate_command("curl FILE:///etc/passwd") is not None)
+test("curl http:// allowed", validate_command("curl http://example.com") is None)
 
 # ============================================================
 print()

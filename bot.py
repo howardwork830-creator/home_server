@@ -11,6 +11,7 @@ from config import TELEGRAM_BOT_TOKEN, WORK_DIR, logger
 from handlers.cd import cd_handler, cd_callback_handler
 from handlers.claude import claude_handler, claude_continue_handler, chat_handler, exit_handler
 from handlers.files import file_upload_handler
+from handlers.network import network_handler
 from handlers.newproject import newproject_handler
 from handlers.shell import shell_handler
 from handlers.start import start_handler, help_handler
@@ -26,6 +27,7 @@ BOT_COMMANDS = [
     BotCommand("newproject", "Create a new project"),
     BotCommand("tmux", "Manage tmux sessions"),
     BotCommand("status", "Show system status"),
+    BotCommand("network", "Show network diagnostics"),
     BotCommand("help", "Show help message"),
 ]
 
@@ -50,6 +52,7 @@ def main():
     app.add_handler(CommandHandler("chat", chat_handler))
     app.add_handler(CommandHandler("exit", exit_handler))
     app.add_handler(CommandHandler("cd", cd_handler))
+    app.add_handler(CommandHandler("network", network_handler))
     app.add_handler(CommandHandler("newproject", newproject_handler))
     app.add_handler(CallbackQueryHandler(cd_callback_handler, pattern=r"^cd"))
 
