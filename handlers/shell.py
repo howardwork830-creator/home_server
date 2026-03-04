@@ -1,124 +1,49 @@
-import shlex
+"""Shell command handler — routes plain text messages.
+
+Handles keyboard button hints, chat mode routing, exit commands,
+and executes validated commands in persistent terminal sessions.
+"""
+
 import time
 
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from config import (
-    DANGEROUS_ARGS,
-    DANGEROUS_PATTERNS,
-    REQUIRED_ARGS,
-    SAFE_COMMANDS,
-    SUBCOMMAND_ALLOWLISTS,
-    SHELL_METACHARACTERS,
-    logger,
-)
+from config import logger
 from handlers.auth import authorized
 from handlers.cd import get_working_dir
 from handlers.claude import is_chat_mode, chat_message_handler
 from handlers.newproject import pending_project_md_handler
-from utils.audit import log_action
-from utils.chunker import chunk_text
-from utils.path_guard import guard_command_paths
-from utils.rate_limiter import rate_limiter
-from utils.scrubber import scrub_output
 from handlers.terminal import (
     _get_active,
     _get_terminals,
     close_terminal,
     ensure_terminal,
 )
-from utils.subprocess_runner import run_shell_command
+from utils.audit import log_action
+from utils.chunker import chunk_text
+from utils.command_validator import validate_command
+from utils.rate_limiter import rate_limiter
+from utils.scrubber import scrub_output
 from utils.terminal_manager import run_in_session
 
-
-def _check_metacharacters(command: str) -> str | None:
-    """Block shell metacharacters that bypass pipe-only parsing."""
-    for meta in SHELL_METACHARACTERS:
-        if meta in command:
-            return f"Blocked: shell metacharacter `{meta}` is not allowed."
-    return None
-
-
-def _check_dangerous_args(base_cmd: str, parts: list[str]) -> str | None:
-    """Block known dangerous arguments for specific commands."""
-    blocked = DANGEROUS_ARGS.get(base_cmd)
-    if not blocked:
-        return None
-    for arg in parts[1:]:
-        for bad in blocked:
-            if arg == bad or arg.startswith(bad + "=") or arg.startswith(bad + " "):
-                return f"Blocked: argument `{arg}` is not allowed for `{base_cmd}`."
-    return None
-
-
-def _check_required_args(base_cmd: str, parts: list[str]) -> str | None:
-    """Ensure commands that need specific flags have them (prevents hangs)."""
-    req = REQUIRED_ARGS.get(base_cmd)
-    if not req:
-        return None
-    flag = req["flag"]
-    if not any(arg == flag or arg.startswith(flag) for arg in parts[1:]):
-        return req["error"]
-    return None
-
-
-def validate_command(command: str) -> str | None:
-    """Validate a command string. Returns an error message or None if valid."""
-    # 1. Metacharacter blocking
-    meta_err = _check_metacharacters(command)
-    if meta_err:
-        return meta_err
-
-    # 2. Dangerous pattern check
-    for pattern in DANGEROUS_PATTERNS:
-        if pattern.search(command):
-            return f"Blocked: matches dangerous pattern `{pattern.pattern}`"
-
-    # 3. Path guard — check for sensitive paths in arguments
-    path_err = guard_command_paths(command)
-    if path_err:
-        return path_err
-
-    # 4. Parse pipe segments and validate each command
-    segments = command.split("|")
-    for segment in segments:
-        segment = segment.strip()
-        if not segment:
-            continue
-        try:
-            parts = shlex.split(segment)
-        except ValueError:
-            parts = segment.split()
-
-        if not parts:
-            continue
-
-        base_cmd = parts[0]
-        if base_cmd not in SAFE_COMMANDS:
-            return f"Command `{base_cmd}` is not in the allowlist."
-
-        # 5. Argument injection defense
-        arg_err = _check_dangerous_args(base_cmd, parts)
-        if arg_err:
-            return arg_err
-
-        # 6. Required args check (prevent hangs)
-        req_err = _check_required_args(base_cmd, parts)
-        if req_err:
-            return req_err
-
-        # 7. Subcommand/flag allowlist validation
-        if base_cmd in SUBCOMMAND_ALLOWLISTS:
-            if len(parts) < 2:
-                return f"`{base_cmd}` requires a subcommand or flag."
-            if parts[1] not in SUBCOMMAND_ALLOWLISTS[base_cmd]:
-                return (
-                    f"`{base_cmd}` subcommand `{parts[1]}` is not allowed. "
-                    f"Allowed: {', '.join(sorted(SUBCOMMAND_ALLOWLISTS[base_cmd]))}"
-                )
-
-    return None
+# Keyboard button → hint text mapping
+BUTTON_HINTS = {
+    "Shell": "Type any allowlisted command (e.g. `ls`, `pwd`, `uptime`).",
+    "Claude": "Use /claude <prompt> to ask Claude a question.",
+    "Files": "Upload a document to save it to the working directory.",
+    "Git": "Type a git command (e.g. `git status`, `git log`).",
+    "Status": "Use /status to see system info.",
+    "Terminal": "Use /t to manage terminals. Commands auto-create a terminal.",
+    "tmux": "Use /tmux ls or /tmux send <session> <cmd>.",
+    "CD": "Use /cd to select a project directory on Desktop.",
+    "Chat": "Use /chat to enter Claude chat mode for back-and-forth coding.",
+    "New Project": "Use /newproject <name> to create a new project folder on Desktop.",
+    "Network": "Use /network to see network diagnostics (IPs, connectivity, VPN).",
+    "Get File": "Use /getfile <path> to download a file.",
+    "App": "Use /app to list, launch, or quit applications.",
+    "Sys Info": "Use /sysinfo for detailed system information.",
+}
 
 
 @authorized
@@ -130,24 +55,8 @@ async def shell_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
     # Handle keyboard button presses
-    button_hints = {
-        "Shell": "Type any allowlisted command (e.g. `ls`, `pwd`, `uptime`).",
-        "Claude": "Use /claude <prompt> to ask Claude a question.",
-        "Files": "Upload a document to save it to the working directory.",
-        "Git": "Type a git command (e.g. `git status`, `git log`).",
-        "Status": "Use /status to see system info.",
-        "Terminal": "Use /t to manage terminals. Commands auto-create a terminal.",
-        "tmux": "Use /tmux ls or /tmux send <session> <cmd>.",
-        "CD": "Use /cd to select a project directory on Desktop.",
-        "Chat": "Use /chat to enter Claude chat mode for back-and-forth coding.",
-        "New Project": "Use /newproject <name> to create a new project folder on Desktop.",
-        "Network": "Use /network to see network diagnostics (IPs, connectivity, VPN).",
-        "Get File": "Use /getfile <path> to download a file.",
-        "App": "Use /app to list, launch, or quit applications.",
-        "Sys Info": "Use /sysinfo for detailed system information.",
-    }
-    if command in button_hints:
-        await update.message.reply_text(button_hints[command])
+    if command in BUTTON_HINTS:
+        await update.message.reply_text(BUTTON_HINTS[command])
         return
 
     # Pending project.md — intercept before chat mode and shell
@@ -185,6 +94,7 @@ async def shell_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("No active terminal to close.")
         return
 
+    # Validate command through security pipeline
     error = validate_command(command)
     if error:
         logger.info("Blocked command from %s: %s — %s", user_id, command, error)

@@ -213,45 +213,50 @@ Command output is never logged (could contain secrets).
 
 ```
 home server/
-├── bot.py                     # Entry point — handler registration and polling
+├── bot.py                     # Entry point — registers handlers, starts polling
 ├── main.py                    # Unified CLI launcher (--bot, --stream, --no-go2rtc)
 ├── screen_stream.py           # Screen capture HTTP server (MJPEG + /frame)
-├── config.py                  # All configuration, constants, and security rules
 ├── test_security.py           # Security test suite (394 tests)
-├── go2rtc.yaml                # go2rtc relay configuration
-├── requirements.txt           # Python dependencies
-├── .env.example               # Environment variable template
-├── handlers/
-│   ├── auth.py                # @authorized decorator + audit logging
-│   ├── app.py                 # /app application launcher/quitter
-│   ├── cd.py                  # /cd directory selector handler
-│   ├── claude.py              # /claude, /claude_continue, /chat handlers
-│   ├── files.py               # File upload handler
-│   ├── getfile.py             # /getfile download handler
-│   ├── monitor.py             # /monitor live screen Mini App handler
-│   ├── network.py             # /network diagnostics handler
-│   ├── newproject.py          # /newproject project creation handler
-│   ├── shell.py               # Shell command validation and execution
-│   ├── start.py               # /start and /help handlers
-│   ├── status.py              # /status handler
-│   ├── sysinfo.py             # /sysinfo detailed system info handler
-│   ├── terminal.py            # /t persistent terminal session management
-│   └── tmux.py                # /tmux handler
-├── utils/
-│   ├── audit.py               # Structured JSON audit logging
-│   ├── chunker.py             # Split text for Telegram's message limit
-│   ├── claude_stream.py       # Parse Claude CLI stream-json output
-│   ├── path_guard.py          # Sensitive path blocking
-│   ├── rate_limiter.py        # Sliding window rate limiter
-│   ├── scrubber.py            # Secret redaction from output
-│   ├── subprocess_runner.py   # Async command execution with timeout + output cap
-│   └── terminal_manager.py    # tmux session lifecycle (create, kill, run_in_session)
+├── config/                    # Configuration (split by concern)
+│   ├── __init__.py            #   Re-exports everything for backward compat
+│   ├── env.py                 #   Environment variables, paths, tokens
+│   ├── commands.py            #   Allowlists, blocklists, validation rules
+│   ├── security.py            #   Sensitive paths, secret patterns, app allowlist
+│   ├── claude.py              #   Claude AI agent settings
+│   ├── limits.py              #   Timeouts, rate limits, size constraints
+│   └── logging_setup.py       #   Logging configuration + logger
+├── handlers/                  # Telegram command handlers (by domain)
+│   ├── auth.py                #   @authorized decorator (access control)
+│   ├── shell.py               #   Plain text → terminal execution (catch-all)
+│   ├── terminal.py            #   /t persistent terminal sessions
+│   ├── start.py               #   /start welcome, /help command list
+│   ├── claude.py              #   /claude, /chat, /exit, /claude_continue
+│   ├── status.py              #   /status (uptime, disk, Tailscale)
+│   ├── sysinfo.py             #   /sysinfo (battery, memory, hardware)
+│   ├── network.py             #   /network diagnostics
+│   ├── monitor.py             #   /monitor live screen capture
+│   ├── app.py                 #   /app launch/quit applications
+│   ├── tmux.py                #   /tmux raw session control
+│   ├── cd.py                  #   /cd directory selector
+│   ├── newproject.py          #   /newproject create project folder
+│   ├── files.py               #   Document upload handler
+│   └── getfile.py             #   /getfile download to Telegram
+├── utils/                     # Shared utilities
+│   ├── command_validator.py   #   7-layer command validation pipeline
+│   ├── terminal_manager.py    #   tmux session lifecycle
+│   ├── subprocess_runner.py   #   Async shell execution + timeout
+│   ├── path_guard.py          #   Sensitive path blocking
+│   ├── scrubber.py            #   Secret redaction from output
+│   ├── rate_limiter.py        #   Sliding window rate limiter
+│   ├── chunker.py             #   Split text for Telegram's limit
+│   ├── claude_stream.py       #   Parse Claude CLI stream-json
+│   └── audit.py               #   Structured JSONL audit logging
 ├── miniapp/
-│   └── monitor.html           # Telegram Mini App — live screen viewer
+│   └── monitor.html           #   Telegram Mini App — live screen viewer
 ├── docs/
-│   ├── USER-MANUAL.md         # End-user Telegram bot manual
-│   ├── project.md             # Project design & architecture reference
-│   └── macOS-CLI-Guide.md     # macOS CLI command reference
+│   ├── USER-MANUAL.md         #   End-user Telegram bot manual
+│   ├── project.md             #   Project design & architecture reference
+│   └── macOS-CLI-Guide.md     #   macOS CLI command reference
 └── deploy/
     └── com.howard.telegrambot.plist  # macOS LaunchAgent config
 ```

@@ -30,14 +30,14 @@ There is no separate lint or build step. The test suite (`test_security.py`) use
 
 **Handler pattern:** Each handler in `handlers/` is decorated with `@authorized` (from `handlers/auth.py`) which checks the user's Telegram ID against `AUTHORIZED_USER_IDS` and logs to the audit trail. Handlers receive `(update, context)` and use `context.user_data` for per-user state (`working_dir`, `claude_session_id`, `claude_chat_mode`, `terminals`, `active_terminal`).
 
-**Command validation pipeline** (`handlers/shell.py` → `validate_command()`):
+**Command validation pipeline** (`utils/command_validator.py` → `validate_command()`):
 1. Block shell metacharacters (`;`, `&&`, `||`, `` ` ``, `$(`, etc.)
 2. Block dangerous patterns via regex (sudo, rm -rf, reboot, etc.)
 3. Block sensitive paths via `utils/path_guard.py`
 4. Split by pipe `|`, parse each segment with `shlex`
 5. Check base command against `SAFE_COMMANDS` allowlist
 6. Check per-command dangerous arguments (`DANGEROUS_ARGS`)
-7. Validate git subcommands against `ALLOWED_GIT_SUBCOMMANDS`
+7. Validate subcommands against `SUBCOMMAND_ALLOWLISTS`
 
 **Screen Monitor Pipeline:** Three services work together for live screen viewing in Telegram:
 - `screen_stream.py` — CoreGraphics screen capture, serves JPEG frames over HTTP (port 9999)
@@ -49,26 +49,28 @@ There is no separate lint or build step. The test suite (`test_security.py`) use
 
 **Claude integration** (`handlers/claude.py`): Invokes the `claude` CLI in agent mode with `--output-format stream-json`. Output is parsed by `utils/claude_stream.py`, buffered for 3-second intervals, and sent to Telegram in chunks. Tool access is restricted to `CLAUDE_ALLOWED_TOOLS` in config.
 
-**Security utilities in `utils/`:**
+**Utilities in `utils/`:**
+- `command_validator.py` — 7-layer command validation pipeline (extracted from shell.py)
+- `terminal_manager.py` — Stateless tmux session lifecycle helpers (create, kill, run_in_session)
 - `path_guard.py` — Resolves and blocks access to sensitive paths (pre-expanded at import time)
 - `scrubber.py` — Redacts API keys and secrets from output using `SECRET_PATTERNS`
 - `rate_limiter.py` — Sliding window rate limiter (20 shell/min, 5 Claude/min)
 - `subprocess_runner.py` — Async execution with timeout and process group cleanup
 - `audit.py` — Structured JSONL audit logging (never logs command output)
 - `chunker.py` — Splits output into Telegram-safe 4000-char chunks
-- `terminal_manager.py` — Stateless tmux session lifecycle helpers (create, kill, run_in_session)
 
-## Key Configuration (`config.py`)
+## Key Configuration (`config/`)
 
-All security rules, timeouts, and constants are centralized in `config.py`. When adding new commands or modifying security rules, this is the single source of truth. Key constants:
+Configuration is split into focused modules under the `config/` package. All imports like `from config import SAFE_COMMANDS` work unchanged — `config/__init__.py` re-exports everything.
 
-- `SAFE_COMMANDS` — Allowlisted shell commands
-- `CLAUDE_ALLOWED_TOOLS` — Tools the Claude agent can use
-- `BLOCKED_PATHS` / `BLOCKED_PATH_PATTERNS` — Sensitive file paths
-- `MAX_TERMINALS` — 3 concurrent terminal sessions per user
-- `COMMAND_TIMEOUT` / `CLAUDE_TIMEOUT` — 300s each
-- `MAX_OUTPUT_BYTES` — 50KB output cap
-- `CLAUDE_MAX_BUDGET_USD` — $1.00 per request
+| Module | Contents |
+|--------|----------|
+| `config/env.py` | Environment variables, paths, tokens (loads `.env`) |
+| `config/commands.py` | `SAFE_COMMANDS`, `DANGEROUS_PATTERNS`, `DANGEROUS_ARGS`, `SUBCOMMAND_ALLOWLISTS` |
+| `config/security.py` | `BLOCKED_PATHS`, `SECRET_PATTERNS`, `APP_LAUNCH_ALLOWLIST` |
+| `config/claude.py` | `CLAUDE_ALLOWED_TOOLS`, `CLAUDE_SYSTEM_PROMPT`, `CLAUDE_MAX_BUDGET_USD` |
+| `config/limits.py` | Timeouts, rate limits, size caps, `MAX_TERMINALS` |
+| `config/logging_setup.py` | Logging configuration and `logger` instance |
 
 ## Adding a New Handler
 

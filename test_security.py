@@ -58,7 +58,7 @@ print("=" * 60)
 print("2. SHELL METACHARACTER BLOCKING")
 print("=" * 60)
 
-from handlers.shell import validate_command
+from utils.command_validator import validate_command
 
 metachar_tests = [
     ("ls; rm -rf /",          ";",   True),
@@ -86,7 +86,7 @@ print("=" * 60)
 print("3. ARGUMENT INJECTION DEFENSE")
 print("=" * 60)
 
-from handlers.shell import _check_dangerous_args
+from utils.command_validator import _check_dangerous_args
 
 arg_tests = [
     ("find",    ["find", ".", "-exec", "rm", "{}"],         True),
@@ -529,7 +529,7 @@ print("=" * 60)
 print("15. NEW DANGEROUS_ARGS — CURL, WGET, SED, OPEN")
 print("=" * 60)
 
-from handlers.shell import _check_dangerous_args, _check_required_args
+from utils.command_validator import _check_dangerous_args, _check_required_args  # noqa: E501
 
 # curl dangerous args
 curl_blocked = [
