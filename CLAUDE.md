@@ -13,9 +13,9 @@ A security-hardened Telegram bot that serves as a remote coding assistant on a M
 python3 bot.py
 
 # Run all services (bot + screen stream + go2rtc)
-python3 start_all.py
+python3 main.py
 
-# Run all 362 security tests
+# Run all 394 security tests
 python3 test_security.py
 
 # Install dependencies
@@ -28,7 +28,7 @@ There is no separate lint or build step. The test suite (`test_security.py`) use
 
 **Entry point:** `bot.py` registers Telegram handlers and starts polling. Plain text messages are routed to `shell_handler` as a catch-all (must be registered last).
 
-**Handler pattern:** Each handler in `handlers/` is decorated with `@authorized` (from `handlers/auth.py`) which checks the user's Telegram ID against `AUTHORIZED_USER_IDS` and logs to the audit trail. Handlers receive `(update, context)` and use `context.user_data` for per-user state (`working_dir`, `claude_session_id`, `claude_chat_mode`).
+**Handler pattern:** Each handler in `handlers/` is decorated with `@authorized` (from `handlers/auth.py`) which checks the user's Telegram ID against `AUTHORIZED_USER_IDS` and logs to the audit trail. Handlers receive `(update, context)` and use `context.user_data` for per-user state (`working_dir`, `claude_session_id`, `claude_chat_mode`, `terminals`, `active_terminal`).
 
 **Command validation pipeline** (`handlers/shell.py` → `validate_command()`):
 1. Block shell metacharacters (`;`, `&&`, `||`, `` ` ``, `$(`, etc.)
@@ -43,7 +43,9 @@ There is no separate lint or build step. The test suite (`test_security.py`) use
 - `screen_stream.py` — CoreGraphics screen capture, serves JPEG frames over HTTP (port 9999)
 - `go2rtc` — Relays the MJPEG stream as HLS/WebRTC (port 1984); optional, binary not in git
 - `miniapp/monitor.html` — Telegram Mini App that polls frames for live updates (hosted on GitHub Pages)
-- `start_all.py` — Launches all three services (plus the bot) with graceful shutdown on Ctrl+C
+- `main.py` — Unified CLI launcher for all services with selective flags (`--bot`, `--stream`, `--no-go2rtc`, etc.)
+
+**Persistent terminal sessions** (`handlers/terminal.py` + `utils/terminal_manager.py`): Shell commands run inside tmux-backed persistent terminals (up to 3 per user). State (working directory, env vars) persists between commands. Output is captured via temp files with `tmux wait-for` synchronization. The `/t` command manages terminals (list, new, switch, close). Typing `exit` as a plain-text message closes the active terminal.
 
 **Claude integration** (`handlers/claude.py`): Invokes the `claude` CLI in agent mode with `--output-format stream-json`. Output is parsed by `utils/claude_stream.py`, buffered for 3-second intervals, and sent to Telegram in chunks. Tool access is restricted to `CLAUDE_ALLOWED_TOOLS` in config.
 
@@ -54,6 +56,7 @@ There is no separate lint or build step. The test suite (`test_security.py`) use
 - `subprocess_runner.py` — Async execution with timeout and process group cleanup
 - `audit.py` — Structured JSONL audit logging (never logs command output)
 - `chunker.py` — Splits output into Telegram-safe 4000-char chunks
+- `terminal_manager.py` — Stateless tmux session lifecycle helpers (create, kill, run_in_session)
 
 ## Key Configuration (`config.py`)
 
@@ -62,6 +65,7 @@ All security rules, timeouts, and constants are centralized in `config.py`. When
 - `SAFE_COMMANDS` — Allowlisted shell commands
 - `CLAUDE_ALLOWED_TOOLS` — Tools the Claude agent can use
 - `BLOCKED_PATHS` / `BLOCKED_PATH_PATTERNS` — Sensitive file paths
+- `MAX_TERMINALS` — 3 concurrent terminal sessions per user
 - `COMMAND_TIMEOUT` / `CLAUDE_TIMEOUT` — 300s each
 - `MAX_OUTPUT_BYTES` — 50KB output cap
 - `CLAUDE_MAX_BUDGET_USD` — $1.00 per request

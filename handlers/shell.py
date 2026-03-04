@@ -22,7 +22,14 @@ from utils.chunker import chunk_text
 from utils.path_guard import guard_command_paths
 from utils.rate_limiter import rate_limiter
 from utils.scrubber import scrub_output
+from handlers.terminal import (
+    _get_active,
+    _get_terminals,
+    close_terminal,
+    ensure_terminal,
+)
 from utils.subprocess_runner import run_shell_command
+from utils.terminal_manager import run_in_session
 
 
 def _check_metacharacters(command: str) -> str | None:
@@ -129,6 +136,7 @@ async def shell_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Files": "Upload a document to save it to the working directory.",
         "Git": "Type a git command (e.g. `git status`, `git log`).",
         "Status": "Use /status to see system info.",
+        "Terminal": "Use /t to manage terminals. Commands auto-create a terminal.",
         "tmux": "Use /tmux ls or /tmux send <session> <cmd>.",
         "CD": "Use /cd to select a project directory on Desktop.",
         "Chat": "Use /chat to enter Claude chat mode for back-and-forth coding.",
@@ -158,6 +166,25 @@ async def shell_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(limit_msg)
         return
 
+    # Handle "exit" — close active terminal
+    if command == "exit":
+        terminals = _get_terminals(context)
+        active = _get_active(context)
+        if active and active in terminals:
+            await close_terminal(user_id, active, context)
+            new_active = _get_active(context)
+            if new_active:
+                await update.message.reply_text(
+                    f"Closed terminal {active}. Active terminal: {new_active}"
+                )
+            else:
+                await update.message.reply_text(
+                    f"Closed terminal {active}. No active terminals."
+                )
+            return
+        await update.message.reply_text("No active terminal to close.")
+        return
+
     error = validate_command(command)
     if error:
         logger.info("Blocked command from %s: %s — %s", user_id, command, error)
@@ -165,15 +192,27 @@ async def shell_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"Blocked: {error}")
         return
 
-    logger.info("Running command from %s: %s", user_id, command)
+    # Run in persistent terminal session
+    try:
+        slot, tmux_session = await ensure_terminal(user_id, context)
+    except RuntimeError as e:
+        await update.message.reply_text(str(e))
+        return
+
+    logger.info("Running command from %s in T%d: %s", user_id, slot, command)
     start_time = time.monotonic()
-    output, return_code = await run_shell_command(command, cwd=get_working_dir(context))
+    output, return_code = await run_in_session(tmux_session, command)
     duration = time.monotonic() - start_time
 
     # Scrub secrets from output
     output = scrub_output(output)
 
-    prefix = "" if return_code == 0 else f"[exit {return_code}]\n"
+    terminals = _get_terminals(context)
+    t_info = terminals.get(slot, {})
+    t_name = t_info.get("name", f"T{slot}")
+    t_label = f"[T{slot}: {t_name}] " if t_name != f"T{slot}" else f"[T{slot}] "
+
+    prefix = t_label if return_code == 0 else f"{t_label}[exit {return_code}]\n"
     full_output = prefix + output
 
     result = "ok" if return_code == 0 else f"exit_{return_code}"

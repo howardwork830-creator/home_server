@@ -31,16 +31,21 @@ def _resolve_safe_path(relative: str) -> Path | None:
     return target
 
 
+MAX_CALLBACK_DATA = 64  # Telegram's limit in bytes
+
+
 def _dir_keyboard(parent: Path, prefix: str = "cd") -> InlineKeyboardMarkup:
     """Build an inline keyboard listing subdirectories of *parent*."""
     dirs = sorted(
         [d for d in parent.iterdir() if d.is_dir() and not d.name.startswith(".")],
         key=lambda d: d.name.lower(),
     )
-    buttons = [
-        [InlineKeyboardButton(d.name, callback_data=f"{prefix}:{d.name}")]
-        for d in dirs
-    ]
+    buttons = []
+    for d in dirs:
+        cb_data = f"{prefix}:{d.name}"
+        if len(cb_data.encode("utf-8")) > MAX_CALLBACK_DATA:
+            continue  # skip — name too long for Telegram callback_data
+        buttons.append([InlineKeyboardButton(d.name, callback_data=cb_data)])
     return InlineKeyboardMarkup(buttons)
 
 
@@ -114,16 +119,22 @@ async def cd_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             key=lambda d: d.name.lower(),
         )
 
-        buttons = [
-            [InlineKeyboardButton(
-                f"{CHECK_MARK} Select: {name}/",
-                callback_data=f"cdset:{name}",
-            )]
-        ]
+        buttons = []
+        select_cb = f"cdset:{name}"
+        if len(select_cb.encode("utf-8")) <= MAX_CALLBACK_DATA:
+            buttons.append(
+                [InlineKeyboardButton(
+                    f"{CHECK_MARK} Select: {name}/",
+                    callback_data=select_cb,
+                )]
+            )
         for sd in subdirs:
             rel = f"{name}/{sd.name}"
+            cb_data = f"cdset:{rel}"
+            if len(cb_data.encode("utf-8")) > MAX_CALLBACK_DATA:
+                continue
             buttons.append(
-                [InlineKeyboardButton(sd.name, callback_data=f"cdset:{rel}")]
+                [InlineKeyboardButton(sd.name, callback_data=cb_data)]
             )
         buttons.append(
             [InlineKeyboardButton(f"{BACK_ARROW} Back", callback_data="cd:__back__")]

@@ -7,7 +7,7 @@ KEYBOARD = ReplyKeyboardMarkup(
     [
         ["Shell", "Claude"],
         ["Files", "Git"],
-        ["Status", "tmux"],
+        ["Status", "Terminal"],
         ["CD", "Chat"],
         ["New Project", "Network"],
         ["Monitor", "Get File"],
@@ -24,6 +24,10 @@ HELP_TEXT = """Available commands:
 /network — Network diagnostics (IPs, connectivity, VPN)
 /claude <prompt> — Ask Claude a question
 /claude_continue <prompt> — Continue the last Claude conversation
+/t — List persistent terminal sessions
+/t new [name] — Create a new terminal (max 3)
+/t <id> — Switch active terminal
+/t close <id> — Close a terminal
 /tmux ls — List tmux sessions
 /tmux send <session> <command> — Send command to tmux session
 /cd — Select project directory (Desktop folders)
@@ -34,6 +38,8 @@ HELP_TEXT = """Available commands:
 /app — List/launch/quit applications
 /sysinfo — Detailed system info (battery, memory, hardware, storage)
 /monitor — Open live screen monitor (via Telegram Mini App)
+
+Persistent terminals: Commands run in tmux-backed sessions. cd, env vars, and state persist between commands. Type "exit" to close the active terminal.
 
 Plain text — Executed as a shell command (72 allowlisted commands)
 Document upload — Saved to the working directory

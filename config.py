@@ -101,6 +101,9 @@ BLOCKED_PATH_PATTERNS: list[re.Pattern] = [
     re.compile(r"\.env\b"),  # any .env file
 ]
 
+# --- Terminal sessions ---
+MAX_TERMINALS = 3
+
 # --- Timeouts & limits ---
 COMMAND_TIMEOUT = 300
 TAILSCALE_STATUS_TIMEOUT = 5

@@ -17,6 +17,7 @@ from handlers.monitor import monitor_handler, monitor_refresh_callback
 from handlers.network import network_handler
 from handlers.newproject import newproject_handler, pending_project_md_handler
 from handlers.shell import shell_handler
+from handlers.terminal import terminal_handler
 from handlers.start import start_handler, help_handler
 from handlers.status import status_handler
 from handlers.sysinfo import sysinfo_handler
@@ -36,6 +37,7 @@ BOT_COMMANDS = [
     BotCommand("sysinfo", "Detailed system information"),
     BotCommand("network", "Show network diagnostics"),
     BotCommand("monitor", "Live screen monitor"),
+    BotCommand("t", "Manage terminal sessions"),
     BotCommand("help", "Show help message"),
 ]
 
@@ -66,6 +68,7 @@ def main():
     app.add_handler(CommandHandler("network", network_handler))
     app.add_handler(CommandHandler("monitor", monitor_handler))
     app.add_handler(CommandHandler("newproject", newproject_handler))
+    app.add_handler(CommandHandler("t", terminal_handler))
     app.add_handler(CallbackQueryHandler(cd_callback_handler, pattern=r"^cd"))
     app.add_handler(CallbackQueryHandler(monitor_refresh_callback, pattern=r"^monitor_refresh$"))
 

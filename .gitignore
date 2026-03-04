@@ -1,8 +1,25 @@
+# Environment and secrets
 .env
+
+# Python
 __pycache__/
 *.pyc
-*.log
-.DS_Store
-audit.jsonl
+*.pyo
 .pytest_cache/
+
+# Logs
+*.log
+audit.jsonl
+
+# macOS
+.DS_Store
+
+# Binaries (not in git)
 go2rtc
+
+# IDE / editor
+.vscode/
+.idea/
+
+# Claude Code
+.claude/

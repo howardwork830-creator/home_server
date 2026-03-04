@@ -3,10 +3,10 @@
 <!--
 AI AGENT CONTEXT:
 - This project runs a Telegram bot on a Mac M1 for comprehensive remote administration via phone
-- Bot uses Claude for code generation, 69 allowlisted shell commands, system/network/process/package management
+- Bot uses Claude for code generation, 72 allowlisted shell commands, system/network/process/package management, persistent terminal sessions
 - All traffic goes through Tailscale VPN; visual monitoring via VNC over Tailscale
 - Key constraints: command allowlist with subcommand restrictions, dangerous-pattern blocklist, Telegram 4096 char limit
-- Reference: macOS-CLI-Guide.md contains the full macOS CLI command reference
+- Reference: docs/macOS-CLI-Guide.md contains the full macOS CLI command reference
 -->
 
 ---
@@ -36,7 +36,7 @@ Telegram Bot API                  macOS Screen Sharing
 Mac M1 (Home) ────────────────────────────────────
   ├── Tailscale VPN (encrypted overlay network)
   ├── Telegram Bot (python-telegram-bot)
-  │   ├── Shell commands (69 allowlisted)
+  │   ├── Shell commands (72 allowlisted, persistent terminals)
   │   ├── System admin (disk, process, package, network)
   │   └── Claude AI agent (coding assistant)
   ├── Screen Stream Pipeline
@@ -52,7 +52,7 @@ Mac M1 (Home) ──────────────────────
 **AI:** Claude as coding assistant.
 **Visual:** Full VNC over Tailscale for interactive GUI access.
 
-References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants), [python-telegram-bot](https://python-telegram-bot.org), [Anthropic API](https://dev.to/engineerdan/generating-python-code-using-anthropic-api-for-claude-ai-4ma4), [macOS-CLI-Guide.md](macOS-CLI-Guide.md)
+References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants), [python-telegram-bot](https://python-telegram-bot.org), [Anthropic API](https://dev.to/engineerdan/generating-python-code-using-anthropic-api-for-claude-ai-4ma4), [macOS-CLI-Guide.md](docs/macOS-CLI-Guide.md)
 
 ---
 
@@ -83,6 +83,7 @@ References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants
 | **Automation** | `shortcuts`, `caffeinate` |
 | **Development** | `python3`, `git`, `npm`, `npx`, `claude` |
 | **Session Management** | `tmux` |
+| **Persistent Terminals** | Up to 3 concurrent tmux-backed terminals per user; `cd` and env vars persist between commands |
 | **Git** | `git status`, `git add`, `git commit`, `git push`, `git log`, `git diff`, `git branch` |
 | **Claude AI** | Code generation, refactoring, error explanation, file editing |
 | **Claude chat** | `/chat` for interactive back-and-forth coding; `/exit` to leave |
@@ -116,7 +117,7 @@ References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants
 ### Mitigations
 
 - **User whitelist:** `AUTHORIZED_USER_IDS` in `.env`; only listed users can use bot
-- **Allowlist:** 69 commands in `SAFE_COMMANDS`, each individually vetted for safety
+- **Allowlist:** 72 commands in `SAFE_COMMANDS`, each individually vetted for safety
 - **Subcommand allowlists:** Per-command restrictions (e.g., `git` limited to safe subcommands, `diskutil` limited to read-only operations)
 - **Argument injection defense:** Dangerous arguments blocked per-command (e.g., `find -exec`, `sort --compress-prog`)
 - **Blocklist:** Regex patterns for `rm -rf`, `sudo`, `mkfs`, `chmod 777`, `reboot`, `shutdown`, `launchctl`, etc.
@@ -153,7 +154,7 @@ screen_stream.py ──► go2rtc ──► miniapp/monitor.html
 - **`go2rtc`** — Relays the MJPEG stream, provides HLS/WebRTC endpoints for the Mini App
 - **`miniapp/monitor.html`** — Telegram WebApp that polls `/frame` for live updates; hosted on GitHub Pages
 
-**Launch all services:** `python3 start_all.py` (starts screen_stream, go2rtc, and bot together; Ctrl+C stops all)
+**Launch all services:** `python3 main.py` (starts screen_stream, go2rtc, and bot together; Ctrl+C stops all)
 
 ### Full GUI Access via VNC
 
@@ -288,6 +289,7 @@ pip3 install python-telegram-bot anthropic aiofiles python-dotenv
 | `/chat` | Enter interactive Claude chat mode (back-and-forth coding) |
 | `/exit` | Leave chat mode |
 | `/cd` | Select a project directory from Desktop folders |
+| `/t` | Manage persistent terminal sessions (list, new, switch, close) |
 | `/newproject <name>` | Create a new project folder on Desktop and switch to it |
 | `/network` | Run network diagnostics (interfaces, public IP, connectivity) |
 | `/monitor` | Open live screen monitor (Telegram Mini App via go2rtc HLS) |
@@ -296,7 +298,7 @@ pip3 install python-telegram-bot anthropic aiofiles python-dotenv
 
 ### Safety Logic
 
-- Parse command → check base command in `SAFE_COMMANDS` (69 commands) → check per-command argument restrictions → check against `DANGEROUS_PATTERNS` regex
+- Parse command → check base command in `SAFE_COMMANDS` (72 commands) → check per-command argument restrictions → check against `DANGEROUS_PATTERNS` regex
 - `os.chdir(WORK_DIR)` before running
 - Async subprocess with timeout (300s); group kill on timeout
 - Output split into ≤ 4000-char chunks for Telegram
@@ -305,7 +307,7 @@ pip3 install python-telegram-bot anthropic aiofiles python-dotenv
 
 ## LaunchAgent (Run as Service)
 
-File: `~/Library/LaunchAgents/com.howard.telegrambot.plist`
+File: `~/Library/LaunchAgents/com.howard.telegrambot.plist` (source: `deploy/com.howard.telegrambot.plist`)
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
