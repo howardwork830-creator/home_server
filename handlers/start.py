@@ -1,20 +1,7 @@
-from telegram import ReplyKeyboardMarkup, Update
+from telegram import ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes
 
 from handlers.auth import authorized
-
-KEYBOARD = ReplyKeyboardMarkup(
-    [
-        ["Shell", "Claude"],
-        ["Files", "Git"],
-        ["Status", "Terminal"],
-        ["CD", "Chat"],
-        ["New Project", "Network"],
-        ["Monitor", "Get File"],
-        ["App", "Sys Info"],
-    ],
-    resize_keyboard=True,
-)
 
 HELP_TEXT = """Available commands:
 
@@ -66,10 +53,10 @@ Dangerous commands (rm -rf, sudo, etc.) are blocked. Some commands require speci
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Welcome to your Mac M1 Home Server Bot!\n\n"
-        "Send any allowlisted shell command as plain text, "
-        "or use the menu buttons below.\n\n"
+        "Send any shell command as plain text (e.g. `ls`, `git status`).\n"
+        "Tap the menu button or type `/` to see all commands.\n\n"
         "Type /help for details.",
-        reply_markup=KEYBOARD,
+        reply_markup=ReplyKeyboardRemove(),
     )
 
 

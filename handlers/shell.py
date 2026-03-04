@@ -27,24 +27,6 @@ from utils.rate_limiter import rate_limiter
 from utils.scrubber import scrub_output
 from utils.terminal_manager import run_in_session
 
-# Keyboard button → hint text mapping
-BUTTON_HINTS = {
-    "Shell": "Type any allowlisted command (e.g. `ls`, `pwd`, `uptime`).",
-    "Claude": "Use /claude <prompt> to ask Claude a question.",
-    "Files": "Upload a document to save it to the working directory.",
-    "Git": "Type a git command (e.g. `git status`, `git log`).",
-    "Status": "Use /status to see system info.",
-    "Terminal": "Use /t to manage terminals. Commands auto-create a terminal.",
-    "tmux": "Use /tmux ls or /tmux send <session> <cmd>.",
-    "CD": "Use /cd to select a project directory on Desktop.",
-    "Chat": "Use /chat to enter Claude chat mode for back-and-forth coding.",
-    "New Project": "Use /newproject <name> to create a new project folder on Desktop.",
-    "Network": "Use /network to see network diagnostics (IPs, connectivity, VPN).",
-    "Get File": "Use /getfile <path> to download a file.",
-    "App": "Use /app to list, launch, or quit applications.",
-    "Sys Info": "Use /sysinfo for detailed system information.",
-}
-
 
 @authorized
 async def shell_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -53,11 +35,6 @@ async def shell_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_id = update.effective_user.id
-
-    # Handle keyboard button presses
-    if command in BUTTON_HINTS:
-        await update.message.reply_text(BUTTON_HINTS[command])
-        return
 
     # Pending project.md — intercept before chat mode and shell
     if context.user_data.get("pending_project_md"):
