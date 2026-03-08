@@ -15,7 +15,7 @@ python3 bot.py
 # Run all services (bot + screen stream + go2rtc)
 python3 main.py
 
-# Run all 394 security tests
+# Run all 407 security tests
 python3 test_security.py
 
 # Install dependencies
@@ -68,6 +68,7 @@ Configuration is split into focused modules under the `config/` package. All imp
 | `config/env.py` | Environment variables, paths, tokens (loads `.env`) |
 | `config/commands.py` | `SAFE_COMMANDS`, `DANGEROUS_PATTERNS`, `DANGEROUS_ARGS`, `SUBCOMMAND_ALLOWLISTS` |
 | `config/security.py` | `BLOCKED_PATHS`, `SECRET_PATTERNS`, `APP_LAUNCH_ALLOWLIST` |
+| `config/steam.py` | `STEAM_GAMES`, `STEAM_APP_PATH` |
 | `config/claude.py` | `CLAUDE_ALLOWED_TOOLS`, `CLAUDE_SYSTEM_PROMPT`, `CLAUDE_MAX_BUDGET_USD` |
 | `config/limits.py` | Timeouts, rate limits, size caps, `MAX_TERMINALS`, polling/keepalive constants |
 | `config/logging_setup.py` | Logging configuration and `logger` instance |

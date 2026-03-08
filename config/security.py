@@ -32,5 +32,5 @@ SECRET_PATTERNS: list[re.Pattern] = [
 APP_LAUNCH_ALLOWLIST: set[str] = {
     "Safari", "Finder", "Terminal", "Visual Studio Code",
     "Preview", "TextEdit", "Activity Monitor", "Console",
-    "Music", "Photos", "Calculator", "Notes",
+    "Music", "Photos", "Calculator", "Notes", "Steam",
 }

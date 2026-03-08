@@ -21,6 +21,9 @@ from config.commands import *  # noqa: F401,F403
 # Security rules
 from config.security import *  # noqa: F401,F403
 
+# Steam configuration
+from config.steam import *  # noqa: F401,F403
+
 # Claude AI settings
 from config.claude import *  # noqa: F401,F403
 

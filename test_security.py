@@ -843,6 +843,34 @@ test("bot.py registers /sysinfo", "sysinfo_handler" in src)
 test("bot.py imports getfile_handler", "getfile_handler" in bot_src)
 test("bot.py imports app_handler", "app_handler" in bot_src)
 test("bot.py imports sysinfo_handler", "sysinfo_handler" in bot_src)
+test("bot.py registers /steam", "steam_handler" in src)
+test("bot.py imports steam_handler", "steam_handler" in bot_src)
+
+# ============================================================
+print()
+print("=" * 60)
+print("24. STEAM — GAME NAME SANITIZATION & ALLOWLIST")
+print("=" * 60)
+
+from config import STEAM_GAMES, STEAM_APP_PATH
+from handlers.steam import _sanitize_game_name, _find_game
+
+# Config tests
+test("STEAM_GAMES is dict", isinstance(STEAM_GAMES, dict))
+test("STEAM_APP_PATH is /Applications/Steam.app", STEAM_APP_PATH == "/Applications/Steam.app")
+
+# Sanitization (same rules as app names)
+test("Steam name: normal name OK", _sanitize_game_name("Stardew Valley") == "Stardew Valley")
+test("Steam name: strips whitespace", _sanitize_game_name("  CS2  ") == "CS2")
+test("Steam name: rejects backtick", _sanitize_game_name("Game`rm") is None)
+test("Steam name: rejects $", _sanitize_game_name("Game$var") is None)
+test("Steam name: rejects semicolon", _sanitize_game_name("Game;rm") is None)
+test("Steam name: rejects pipe", _sanitize_game_name("Game|cat") is None)
+test("Steam name: rejects path traversal", _sanitize_game_name("../etc") is None)
+test("Steam name: empty rejected", _sanitize_game_name("") is None)
+
+# APP_LAUNCH_ALLOWLIST includes Steam
+test("APP_LAUNCH_ALLOWLIST has Steam", "Steam" in APP_LAUNCH_ALLOWLIST)
 
 # ============================================================
 print()

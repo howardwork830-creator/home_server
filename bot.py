@@ -40,6 +40,7 @@ from handlers.sysinfo import sysinfo_handler
 from handlers.network import network_handler
 from handlers.monitor import monitor_handler, monitor_refresh_callback
 from handlers.app import app_handler
+from handlers.steam import steam_handler
 from handlers.tmux import tmux_handler
 
 # Files & navigation
@@ -70,6 +71,7 @@ BOT_COMMANDS = [
     BotCommand("network", "Show network diagnostics"),
     BotCommand("monitor", "Live screen monitor"),
     BotCommand("app", "Manage running applications"),
+    BotCommand("steam", "Control Steam & Remote Play"),
     # Help
     BotCommand("help", "Show help message"),
 ]
@@ -132,6 +134,7 @@ def main():
     app.add_handler(CommandHandler("network", network_handler))
     app.add_handler(CommandHandler("monitor", monitor_handler))
     app.add_handler(CommandHandler("app", app_handler))
+    app.add_handler(CommandHandler("steam", steam_handler))
 
     # --- Callback queries ---
     app.add_handler(CallbackQueryHandler(cd_callback_handler, pattern=r"^cd"))

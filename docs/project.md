@@ -91,6 +91,7 @@ References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants
 | **Files** | Upload via Telegram → working dir; view via `cat` / `head` / `tail` |
 | **Directory** | `/cd` to switch project; `/newproject` to create new project folder |
 | **Live Monitor** | `/monitor` opens live HLS screen stream in Telegram Mini App (go2rtc) |
+| **Steam Remote Play** | `/steam` to control Steam, Big Picture mode, launch games from allowlist |
 | **Visual Monitoring** | VNC over Tailscale for full GUI access |
 
 ### Hard Limits

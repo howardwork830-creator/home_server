@@ -23,6 +23,7 @@ HELP_TEXT = """Available commands:
 /exit — Leave chat mode
 /getfile <path> — Download a file from server to Telegram
 /app — List/launch/quit applications
+/steam — Control Steam (status, start, quit, bigpicture, play, games, tips)
 /sysinfo — Detailed system info (battery, memory, hardware, storage)
 /monitor — Open live screen monitor (via Telegram Mini App)
 

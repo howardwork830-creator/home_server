@@ -190,6 +190,7 @@ These are activated with the `/` prefix.
 | `/tmux send <session> <cmd>` | Send a command to a specific tmux session |
 | `/getfile <path>` | Download a file from server to Telegram |
 | `/app` | List, launch, or quit applications |
+| `/steam` | Control Steam & Remote Play |
 | `/sysinfo` | Detailed system info (battery, memory, hardware, storage) |
 | `/monitor` | Live screen monitor (screenshot or Mini App stream) |
 
@@ -272,7 +273,44 @@ The selected directory becomes the working directory for new terminal sessions.
 /app quit Safari         → Quit an application
 ```
 
-Only apps in the safety allowlist can be launched (Safari, Finder, Terminal, VS Code, Preview, TextEdit, Activity Monitor, Console, Music, Photos, Calculator, Notes).
+Only apps in the safety allowlist can be launched (Safari, Finder, Terminal, VS Code, Preview, TextEdit, Activity Monitor, Console, Music, Photos, Calculator, Notes, Steam).
+
+---
+
+## Steam Remote Play
+
+Control Steam and set up game streaming to your phone via Steam Link.
+
+| Command | What it does |
+|---------|-------------|
+| `/steam` | Show usage help |
+| `/steam status` | Check if Steam is running |
+| `/steam start` | Launch Steam |
+| `/steam quit` | Quit Steam cleanly |
+| `/steam bigpicture` | Enter Big Picture mode (auto-starts Steam if needed) |
+| `/steam play <name>` | Launch a game from the configured allowlist |
+| `/steam games` | List all configured games |
+| `/steam tips` | Setup tips for Steam Link and Tailscale workaround |
+
+### Adding Games
+
+Edit `STEAM_GAMES` in `config/steam.py` to add your installed games:
+
+```python
+STEAM_GAMES: dict[str, int] = {
+    "Counter-Strike 2": 730,
+    "Stardew Valley": 413150,
+}
+```
+
+Find the App ID on the Steam store page URL: `store.steampowered.com/app/<id>`
+
+### Remote Play Setup
+
+1. Install the **Steam Link** app on your phone
+2. Sign into the same Steam account on both devices
+3. On the Mac, activate Big Picture mode: `/steam bigpicture`
+4. If using Tailscale: in Steam Link settings, disable "Use Tailscale subnets"
 
 ---
 
