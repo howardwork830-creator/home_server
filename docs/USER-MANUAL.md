@@ -346,3 +346,4 @@ The main menu keyboard provides quick access:
 - **Pipes work**: `ps aux | grep python`, `cat file.txt | wc -l`
 - **Long output is chunked** — large outputs are split into multiple Telegram messages
 - **Secrets are scrubbed** — API keys in output are replaced with `[REDACTED]`
+- **Connection is resilient** — TCP keepalive probes prevent Tailscale/NAT idle disconnects; the bot auto-recovers from network errors

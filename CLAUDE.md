@@ -26,7 +26,7 @@ There is no separate lint or build step. The test suite (`test_security.py`) use
 
 ## Architecture
 
-**Entry point:** `bot.py` registers Telegram handlers and starts polling. Plain text messages are routed to `shell_handler` as a catch-all (must be registered last).
+**Entry point:** `bot.py` registers Telegram handlers and starts polling with configured timeouts, TCP keepalive (SO_KEEPALIVE + TCP_KEEPALIVE), and a `NetworkError` handler for automatic recovery from Tailscale/NAT connection drops. Plain text messages are routed to `shell_handler` as a catch-all (must be registered last).
 
 **Handler pattern:** Each handler in `handlers/` is decorated with `@authorized` (from `handlers/auth.py`) which checks the user's Telegram ID against `AUTHORIZED_USER_IDS` and logs to the audit trail. Handlers receive `(update, context)` and use `context.user_data` for per-user state (`working_dir`, `claude_session_id`, `claude_chat_mode`, `terminals`, `active_terminal`).
 
@@ -43,7 +43,7 @@ There is no separate lint or build step. The test suite (`test_security.py`) use
 - `screen_stream.py` — CoreGraphics screen capture, serves JPEG frames over HTTP (port 9999)
 - `go2rtc` — Relays the MJPEG stream as HLS/WebRTC (port 1984); optional, binary not in git
 - `miniapp/monitor.html` — Telegram Mini App that polls frames for live updates (hosted on GitHub Pages)
-- `main.py` — Unified CLI launcher for all services with selective flags (`--bot`, `--stream`, `--no-go2rtc`, etc.)
+- `main.py` — Unified CLI launcher for all services with selective flags (`--bot`, `--stream`, `--no-go2rtc`, etc.) and auto-restart of crashed child processes (up to 10 restarts per service)
 
 **Persistent terminal sessions** (`handlers/terminal.py` + `utils/terminal_manager.py`): Shell commands run inside tmux-backed persistent terminals (up to 3 per user). State (working directory, env vars) persists between commands. Output is captured via temp files with `tmux wait-for` synchronization. The `/t` command manages terminals (list, new, switch, close). Typing `exit` as a plain-text message closes the active terminal.
 
@@ -69,7 +69,7 @@ Configuration is split into focused modules under the `config/` package. All imp
 | `config/commands.py` | `SAFE_COMMANDS`, `DANGEROUS_PATTERNS`, `DANGEROUS_ARGS`, `SUBCOMMAND_ALLOWLISTS` |
 | `config/security.py` | `BLOCKED_PATHS`, `SECRET_PATTERNS`, `APP_LAUNCH_ALLOWLIST` |
 | `config/claude.py` | `CLAUDE_ALLOWED_TOOLS`, `CLAUDE_SYSTEM_PROMPT`, `CLAUDE_MAX_BUDGET_USD` |
-| `config/limits.py` | Timeouts, rate limits, size caps, `MAX_TERMINALS` |
+| `config/limits.py` | Timeouts, rate limits, size caps, `MAX_TERMINALS`, polling/keepalive constants |
 | `config/logging_setup.py` | Logging configuration and `logger` instance |
 
 ## Adding a New Handler
@@ -85,4 +85,4 @@ All tests live in `test_security.py`. Tests are organized by security layer (met
 
 ## Environment
 
-Requires a `.env` file (see `.env.example`): `TELEGRAM_BOT_TOKEN`, `AUTHORIZED_USER_IDS`, `WORK_DIR`, `LOG_FILE`, `LOG_LEVEL`. Optional monitor vars: `SCREEN_STREAM_PORT`, `GO2RTC_HOST`, `MINIAPP_BASE_URL`. The bot runs as a macOS LaunchAgent for 24/7 operation.
+Requires a `.env` file (see `.env.example`): `TELEGRAM_BOT_TOKEN`, `AUTHORIZED_USER_IDS`, `WORK_DIR`, `LOG_FILE`, `LOG_LEVEL`. Optional monitor vars: `SCREEN_STREAM_PORT`, `GO2RTC_HOST`, `MINIAPP_BASE_URL`. The bot runs as a macOS LaunchAgent (`main.py`) for 24/7 operation with auto-restart for child processes.

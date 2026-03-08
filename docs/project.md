@@ -47,10 +47,11 @@ Mac M1 (Home) ──────────────────────
   └── Shell / Git / brew / tmux / tools
 ```
 
-**Connectivity:** Tailscale (NAT traversal, secure overlay, no router config).
+**Connectivity:** Tailscale (NAT traversal, secure overlay, no router config). TCP keepalive (60s probes) and polling timeouts prevent connection drops over Tailscale NAT.
 **UI:** Telegram bot (buttons + text) for command-line control; VNC for GUI access.
 **AI:** Claude as coding assistant.
 **Visual:** Full VNC over Tailscale for interactive GUI access.
+**Resilience:** `bot.py` configures TCP keepalive + polling timeouts for Tailscale NAT survival; `main.py` auto-restarts crashed child processes (up to 10 times).
 
 References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants), [python-telegram-bot](https://python-telegram-bot.org), [Anthropic API](https://dev.to/engineerdan/generating-python-code-using-anthropic-api-for-claude-ai-4ma4), [macOS-CLI-Guide.md](docs/macOS-CLI-Guide.md)
 
@@ -98,6 +99,7 @@ References: [Tailscale macOS](https://tailscale.com/docs/concepts/macos-variants
 |-------|-------|
 | Telegram message size | 4096 chars (must chunk output) |
 | Command timeout | 300 seconds (run longer jobs in tmux) |
+| Polling timeout | 10s long-poll, 15s read timeout, 60s TCP keepalive |
 | Interactive TUI | Not supported (no `vim`, `nano`, `htop` over Telegram) |
 | `top` command | Batch mode only (`-l 1`) — interactive mode not supported |
 | VNC access | Requires separate VNC client app; not integrated into Telegram |
@@ -154,7 +156,7 @@ screen_stream.py ──► go2rtc ──► miniapp/monitor.html
 - **`go2rtc`** — Relays the MJPEG stream, provides HLS/WebRTC endpoints for the Mini App
 - **`miniapp/monitor.html`** — Telegram WebApp that polls `/frame` for live updates; hosted on GitHub Pages
 
-**Launch all services:** `python3 main.py` (starts screen_stream, go2rtc, and bot together; Ctrl+C stops all)
+**Launch all services:** `python3 main.py` (starts screen_stream, go2rtc, and bot together with auto-restart; Ctrl+C stops all)
 
 ### Full GUI Access via VNC
 
@@ -307,7 +309,7 @@ pip3 install python-telegram-bot anthropic aiofiles python-dotenv
 
 ## LaunchAgent (Run as Service)
 
-File: `~/Library/LaunchAgents/com.howard.telegrambot.plist` (source: `deploy/com.howard.telegrambot.plist`)
+File: `~/Library/LaunchAgents/com.howard.telegrambot.plist` (source: `deploy/com.howard.telegrambot.plist`). Runs `main.py` so launchd manages all services together, with `main.py` handling child process auto-restart internally.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -319,7 +321,7 @@ File: `~/Library/LaunchAgents/com.howard.telegrambot.plist` (source: `deploy/com
     <key>ProgramArguments</key>
     <array>
         <string>/Library/Frameworks/Python.framework/Versions/3.13/bin/python3</string>
-        <string>/Users/howard/Desktop/VS code file/home server/bot.py</string>
+        <string>/Users/howard/Desktop/VS code file/home server/main.py</string>
     </array>
     <key>WorkingDirectory</key>
     <string>/Users/howard/Desktop/VS code file/home server</string>

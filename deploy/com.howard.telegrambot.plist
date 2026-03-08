@@ -7,7 +7,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/Library/Frameworks/Python.framework/Versions/3.13/bin/python3</string>
-        <string>/Users/howard/Desktop/VS code file/home server/bot.py</string>
+        <string>/Users/howard/Desktop/VS code file/home server/main.py</string>
     </array>
     <key>WorkingDirectory</key>
     <string>/Users/howard/Desktop/VS code file/home server</string>

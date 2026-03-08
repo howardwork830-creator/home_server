@@ -1,12 +1,14 @@
 """Telegram bot entry point — registers all handlers and starts polling."""
 
 import os
+import socket
 import sys
 
 # Ensure the project directory is on sys.path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from telegram import BotCommand
+from telegram.error import NetworkError
 from telegram.ext import (
     ApplicationBuilder,
     CallbackQueryHandler,
@@ -15,7 +17,12 @@ from telegram.ext import (
     filters,
 )
 
-from config import TELEGRAM_BOT_TOKEN, WORK_DIR, logger
+from config import (
+    TELEGRAM_BOT_TOKEN, WORK_DIR, logger,
+    POLLING_TIMEOUT, POLLING_READ_TIMEOUT, POLLING_CONNECT_TIMEOUT,
+    POLLING_WRITE_TIMEOUT, POLLING_POOL_TIMEOUT, POLLING_INTERVAL,
+    TCP_KEEPALIVE_IDLE,
+)
 
 # --- Handler imports (grouped by domain) ---
 
@@ -76,7 +83,29 @@ def main():
         await application.bot.set_my_commands(BOT_COMMANDS)
         logger.info("Bot command menu registered")
 
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
+    socket_opts = (
+        (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),
+        (socket.IPPROTO_TCP, socket.TCP_KEEPALIVE, TCP_KEEPALIVE_IDLE),  # macOS
+    )
+
+    app = (
+        ApplicationBuilder()
+        .token(TELEGRAM_BOT_TOKEN)
+        .post_init(post_init)
+        # Polling (get_updates) timeouts + keepalive
+        .get_updates_read_timeout(POLLING_READ_TIMEOUT)
+        .get_updates_connect_timeout(POLLING_CONNECT_TIMEOUT)
+        .get_updates_write_timeout(POLLING_WRITE_TIMEOUT)
+        .get_updates_pool_timeout(POLLING_POOL_TIMEOUT)
+        .get_updates_socket_options(socket_opts)
+        # Regular API call timeouts + keepalive
+        .read_timeout(POLLING_READ_TIMEOUT)
+        .connect_timeout(POLLING_CONNECT_TIMEOUT)
+        .write_timeout(POLLING_WRITE_TIMEOUT)
+        .pool_timeout(POLLING_POOL_TIMEOUT)
+        .socket_options(socket_opts)
+        .build()
+    )
 
     # --- Core ---
     app.add_handler(CommandHandler("start", start_handler))
@@ -120,8 +149,20 @@ def main():
     # --- Plain text → shell command (catch-all, must be LAST) ---
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, shell_handler))
 
+    async def error_handler(update, context):
+        if isinstance(context.error, NetworkError):
+            logger.warning("Network error (will auto-retry): %s", context.error)
+        else:
+            logger.error("Unhandled error: %s", context.error, exc_info=context.error)
+
+    app.add_error_handler(error_handler)
+
     logger.info("Bot is polling...")
-    app.run_polling(drop_pending_updates=True)
+    app.run_polling(
+        drop_pending_updates=True,
+        timeout=POLLING_TIMEOUT,
+        poll_interval=POLLING_INTERVAL,
+    )
 
 
 if __name__ == "__main__":

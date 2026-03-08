@@ -21,5 +21,8 @@ go2rtc
 .vscode/
 .idea/
 
+# Runtime state
+.service_pids
+
 # Claude Code
 .claude/

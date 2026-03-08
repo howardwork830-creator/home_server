@@ -10,6 +10,7 @@ Usage:
     python3 main.py -C ~/projects     # change working directory before start
 """
 import argparse
+import atexit
 import os
 import signal
 import subprocess
@@ -17,10 +18,15 @@ import sys
 import time
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+PID_FILE = os.path.join(PROJECT_DIR, ".service_pids")
 PYTHON = sys.executable
 DEFAULT_PORT = 9999
 
 processes: dict[str, subprocess.Popen] = {}
+service_configs: dict[str, dict] = {}   # original configs for auto-restart
+restart_counts: dict[str, int] = {}     # restart counter per service
+MAX_RESTARTS = 10
+RESTART_DELAY = 2  # seconds
 shutting_down = False
 
 
@@ -76,6 +82,35 @@ def resolve_services(args: argparse.Namespace) -> list[dict]:
         services.append({"name": "bot", "cmd": [PYTHON, os.path.join(PROJECT_DIR, "bot.py")], "optional": False})
 
     return services
+
+
+def write_pid_file():
+    """Write all child PIDs to a file for stale process cleanup."""
+    with open(PID_FILE, "w") as f:
+        for name, proc in processes.items():
+            f.write(f"{proc.pid} {name}\n")
+
+
+def cleanup_stale_processes():
+    """Kill any leftover processes from a previous run."""
+    if not os.path.isfile(PID_FILE):
+        return
+    killed = []
+    with open(PID_FILE) as f:
+        for line in f:
+            parts = line.strip().split(None, 1)
+            if not parts:
+                continue
+            pid = int(parts[0])
+            name = parts[1] if len(parts) > 1 else "unknown"
+            try:
+                os.killpg(os.getpgid(pid), signal.SIGKILL)
+                killed.append(f"{name} (PID {pid})")
+            except (ProcessLookupError, PermissionError, OSError):
+                pass
+    if killed:
+        print(f"Cleaned up stale processes: {', '.join(killed)}")
+    os.remove(PID_FILE)
 
 
 def start_service(svc: dict) -> bool:
@@ -134,6 +169,12 @@ def shutdown_all():
             proc.wait()
             print(f"  [{name}] killed")
 
+    # Clean up PID file
+    try:
+        os.remove(PID_FILE)
+    except FileNotFoundError:
+        pass
+
 
 def main():
     args = parse_args()
@@ -148,6 +189,8 @@ def main():
     else:
         os.chdir(PROJECT_DIR)
 
+    cleanup_stale_processes()
+
     services = resolve_services(args)
     if not services:
         print("No services selected. Use --help to see options.")
@@ -159,6 +202,8 @@ def main():
 
     for svc in services:
         start_service(svc)
+        service_configs[svc["name"]] = svc
+        restart_counts[svc["name"]] = 0
 
     if not processes:
         print("No services started.")
@@ -166,15 +211,34 @@ def main():
 
     print(f"\n{len(processes)} service(s) running. Press Ctrl+C to stop all.\n")
 
+    write_pid_file()
+    atexit.register(shutdown_all)
     signal.signal(signal.SIGINT, lambda *_: shutdown_all())
     signal.signal(signal.SIGTERM, lambda *_: shutdown_all())
+    signal.signal(signal.SIGHUP, lambda *_: shutdown_all())
 
     try:
         while not shutting_down:
             for name, proc in list(processes.items()):
                 if proc.poll() is not None:
-                    print(f"  [{name}] exited with code {proc.returncode}")
+                    code = proc.returncode
+                    print(f"  [{name}] exited with code {code}")
                     del processes[name]
+
+                    if shutting_down:
+                        break
+
+                    # Auto-restart if we haven't exceeded the limit
+                    if name in service_configs and restart_counts.get(name, 0) < MAX_RESTARTS:
+                        restart_counts[name] = restart_counts.get(name, 0) + 1
+                        count = restart_counts[name]
+                        print(f"  [{name}] restarting ({count}/{MAX_RESTARTS})...")
+                        time.sleep(RESTART_DELAY)
+                        if start_service(service_configs[name]):
+                            write_pid_file()
+                    elif name in service_configs:
+                        print(f"  [{name}] exceeded max restarts ({MAX_RESTARTS}), not restarting")
+
             if not processes:
                 print("All services have exited.")
                 break

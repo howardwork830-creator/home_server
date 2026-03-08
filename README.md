@@ -167,6 +167,7 @@ This gives full mouse/keyboard GUI control — useful for tasks that require vis
 | **Rate limiting** | 20 shell commands/minute, 5 Claude requests/minute per user |
 | **Output size cap** | Truncate at 50KB to prevent memory issues and Telegram spam |
 | **Audit log** | Every action logged to `audit.jsonl` (never logs command output) |
+| **Connection resilience** | TCP keepalive (60s), polling timeouts, NetworkError auto-retry, child process auto-restart |
 
 ### Deferred (Risky) Commands
 
@@ -213,8 +214,8 @@ Command output is never logged (could contain secrets).
 
 ```
 home server/
-├── bot.py                     # Entry point — registers handlers, starts polling
-├── main.py                    # Unified CLI launcher (--bot, --stream, --no-go2rtc)
+├── bot.py                     # Entry point — handlers, polling with TCP keepalive
+├── main.py                    # Unified CLI launcher with auto-restart (--bot, --stream, --no-go2rtc)
 ├── screen_stream.py           # Screen capture HTTP server (MJPEG + /frame)
 ├── test_security.py           # Security test suite (394 tests)
 ├── config/                    # Configuration (split by concern)
@@ -223,7 +224,7 @@ home server/
 │   ├── commands.py            #   Allowlists, blocklists, validation rules
 │   ├── security.py            #   Sensitive paths, secret patterns, app allowlist
 │   ├── claude.py              #   Claude AI agent settings
-│   ├── limits.py              #   Timeouts, rate limits, size constraints
+│   ├── limits.py              #   Timeouts, rate limits, size constraints, polling/keepalive
 │   └── logging_setup.py       #   Logging configuration + logger
 ├── handlers/                  # Telegram command handlers (by domain)
 │   ├── auth.py                #   @authorized decorator (access control)
