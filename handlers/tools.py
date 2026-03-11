@@ -59,14 +59,13 @@ CATEGORY_TOOLS = {
         {"label": "which claude",   "id": "wclaude",  "type": "cmd", "cmd": "which claude && claude --version"},
     ],
     "term": [
-        {"label": "List terminals", "id": "tlist",  "type": "link", "text": "Use /t to list your terminal sessions."},
-        {"label": "New terminal",   "id": "tnew",   "type": "link", "text": "Use /t new to create a new terminal."},
-        {"label": "tmux sessions",  "id": "tmuxls", "type": "cmd",  "cmd": "tmux list-sessions 2>/dev/null || echo 'No sessions'"},
+        {"label": "tmux sessions",  "id": "tmuxls", "type": "cmd", "cmd": "tmux list-sessions 2>/dev/null || echo 'No sessions'"},
+        {"label": "tmux windows",   "id": "tmuxw",  "type": "cmd", "cmd": "tmux list-windows -a 2>/dev/null || echo 'No windows'"},
+        {"label": "who (logins)",   "id": "who",    "type": "cmd", "cmd": "who"},
     ],
     "claude": [
-        {"label": "Enter chat mode",   "id": "cchat",  "type": "link", "text": "Use /chat to enter interactive Claude chat mode."},
-        {"label": "Continue session",   "id": "ccont",  "type": "link", "text": "Use /claude_continue to resume your last Claude conversation."},
-        {"label": "Usage hint",         "id": "cinfo",  "type": "info", "text": (
+        {"label": "claude --version", "id": "cver",  "type": "cmd", "cmd": "claude --version 2>/dev/null || echo 'Claude CLI not found'"},
+        {"label": "claude usage",     "id": "cinfo", "type": "info", "text": (
             "Claude AI commands:\n"
             "\u2022 /claude <prompt> \u2014 one-shot coding question\n"
             "\u2022 /chat \u2014 interactive back-and-forth mode\n"
@@ -87,9 +86,9 @@ CATEGORY_TOOLS = {
         {"label": "ifconfig",     "id": "ifconf", "type": "cmd", "cmd": "ifconfig | grep -A 2 'inet '"},
     ],
     "apps": [
-        {"label": "Running apps",     "id": "appls",   "type": "link", "text": "Use /app to list running applications."},
-        {"label": "Launch VS Code",   "id": "appvsc",  "type": "link", "text": "Use /app launch Visual Studio Code to open VS Code."},
-        {"label": "Launch Finder",    "id": "appfind", "type": "link", "text": "Use /app launch Finder to open Finder."},
+        {"label": "Running apps",    "id": "appls",   "type": "cmd", "cmd": "osascript -e 'tell application \"System Events\" to get name of every process whose background only is false'"},
+        {"label": "Launch VS Code",  "id": "appvsc",  "type": "cmd", "cmd": "open -a 'Visual Studio Code'"},
+        {"label": "Launch Finder",   "id": "appfind", "type": "cmd", "cmd": "open -a 'Finder'"},
     ],
 }
 

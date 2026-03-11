@@ -903,14 +903,14 @@ test("Category: apps", "apps" in cat_ids)
 test("CATEGORY_TOOLS has 8 entries", len(CATEGORY_TOOLS) == 8, f"got {len(CATEGORY_TOOLS)}")
 test("CATEGORY_TOOLS keys match CATEGORIES", set(CATEGORY_TOOLS.keys()) == set(cat_ids))
 for cid in cat_ids:
-    test(f"CATEGORY_TOOLS[{cid}] has tools", len(CATEGORY_TOOLS[cid]) >= 3, f"got {len(CATEGORY_TOOLS[cid])}")
+    test(f"CATEGORY_TOOLS[{cid}] has tools", len(CATEGORY_TOOLS[cid]) >= 2, f"got {len(CATEGORY_TOOLS[cid])}")
 
 # _TOOL_BY_ID spot checks
 test("_TOOL_BY_ID has 'ls'", "ls" in _TOOL_BY_ID)
 test("_TOOL_BY_ID has 'gst'", "gst" in _TOOL_BY_ID)
-test("_TOOL_BY_ID has 'cchat'", "cchat" in _TOOL_BY_ID)
+test("_TOOL_BY_ID has 'appls'", "appls" in _TOOL_BY_ID)
 test("_TOOL_BY_ID['ls'] is cmd type", _TOOL_BY_ID["ls"]["type"] == "cmd")
-test("_TOOL_BY_ID['cchat'] is link type", _TOOL_BY_ID["cchat"]["type"] == "link")
+test("_TOOL_BY_ID['appls'] is cmd type", _TOOL_BY_ID["appls"]["type"] == "cmd")
 test("_TOOL_BY_ID['cinfo'] is info type", _TOOL_BY_ID["cinfo"]["type"] == "info")
 
 # All tool IDs unique
@@ -918,7 +918,7 @@ all_ids = []
 for tools in CATEGORY_TOOLS.values():
     all_ids.extend(t["id"] for t in tools)
 test("All tool IDs unique", len(all_ids) == len(set(all_ids)), f"{len(all_ids)} ids, {len(set(all_ids))} unique")
-test("Total tools is 35", len(all_ids) == 35, f"got {len(all_ids)}")
+test("Total tools is 34", len(all_ids) == 34, f"got {len(all_ids)}")
 
 # All callback data fits Telegram 64-byte limit
 long_callbacks = [f"tl:{tid}" for tid in all_ids] + [f"tl:cat:{cid}" for cid in cat_ids] + ["tl:back", "tl:noop"]
