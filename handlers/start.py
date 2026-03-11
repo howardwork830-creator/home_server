@@ -9,7 +9,7 @@ HELP_TEXT = """Available commands (all menu-driven — just tap!):
 /cd — Browse files & folders (tap to navigate, download, view info)
 /getfile <path> — Download a file (or use /cd to browse & tap)
 /newproject <name> — Create a new project folder on Desktop
-/tools — Quick tools (common shell commands as buttons)
+/tools — Tool hub (files, git, dev, terminals, Claude, system)
 
 🤖 Claude AI
 /claude <prompt> — Ask Claude a question

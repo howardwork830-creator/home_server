@@ -64,7 +64,7 @@ BOT_COMMANDS = [
     BotCommand("tmux", "Manage tmux sessions"),
     # Files & navigation
     BotCommand("cd", "Browse files & set working directory"),
-    BotCommand("tools", "Quick tools (system, files, network, dev)"),
+    BotCommand("tools", "Tool hub (files, git, dev, system, more)"),
     BotCommand("newproject", "Create a new project"),
     BotCommand("getfile", "Download a file from server"),
     # System & monitoring

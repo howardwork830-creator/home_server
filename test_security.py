@@ -878,29 +878,62 @@ test("APP_LAUNCH_ALLOWLIST has Steam", "Steam" in APP_LAUNCH_ALLOWLIST)
 # ============================================================
 print()
 print("=" * 60)
-print("25. TOOLS — QUICK-ACTION BUTTON GRID")
+print("25. TOOLS — CATEGORY-BASED TOOL HUB")
 print("=" * 60)
 
-from handlers.tools import TOOL_CATEGORIES, _TOOL_COMMANDS, tools_handler, tools_callback_handler
+from handlers.tools import (
+    CATEGORIES, CATEGORY_TOOLS, _TOOL_BY_ID, _TOOL_COMMANDS,
+    tools_handler, tools_callback_handler,
+)
 
-# Structure tests
-test("TOOL_CATEGORIES is list", isinstance(TOOL_CATEGORIES, list))
-test("TOOL_CATEGORIES has 4 categories", len(TOOL_CATEGORIES) == 4)
-cat_names = [name for name, _ in TOOL_CATEGORIES]
-test("Category: Files", "Files" in cat_names)
-test("Category: System", "System" in cat_names)
-test("Category: Network", "Network" in cat_names)
-test("Category: Dev", "Dev" in cat_names)
+# Structure tests — CATEGORIES
+test("CATEGORIES is list", isinstance(CATEGORIES, list))
+test("CATEGORIES has 8 entries", len(CATEGORIES) == 8, f"got {len(CATEGORIES)}")
+cat_ids = [c["id"] for c in CATEGORIES]
+test("Category: files", "files" in cat_ids)
+test("Category: git", "git" in cat_ids)
+test("Category: dev", "dev" in cat_ids)
+test("Category: term", "term" in cat_ids)
+test("Category: claude", "claude" in cat_ids)
+test("Category: system", "system" in cat_ids)
+test("Category: net", "net" in cat_ids)
+test("Category: apps", "apps" in cat_ids)
 
-# Lookup dict
-test("_TOOL_COMMANDS is dict", isinstance(_TOOL_COMMANDS, dict))
-test("_TOOL_COMMANDS has 16 entries", len(_TOOL_COMMANDS) == 16)
+# Structure tests — CATEGORY_TOOLS
+test("CATEGORY_TOOLS has 8 entries", len(CATEGORY_TOOLS) == 8, f"got {len(CATEGORY_TOOLS)}")
+test("CATEGORY_TOOLS keys match CATEGORIES", set(CATEGORY_TOOLS.keys()) == set(cat_ids))
+for cid in cat_ids:
+    test(f"CATEGORY_TOOLS[{cid}] has tools", len(CATEGORY_TOOLS[cid]) >= 3, f"got {len(CATEGORY_TOOLS[cid])}")
+
+# _TOOL_BY_ID spot checks
+test("_TOOL_BY_ID has 'ls'", "ls" in _TOOL_BY_ID)
+test("_TOOL_BY_ID has 'gst'", "gst" in _TOOL_BY_ID)
+test("_TOOL_BY_ID has 'cchat'", "cchat" in _TOOL_BY_ID)
+test("_TOOL_BY_ID['ls'] is cmd type", _TOOL_BY_ID["ls"]["type"] == "cmd")
+test("_TOOL_BY_ID['cchat'] is link type", _TOOL_BY_ID["cchat"]["type"] == "link")
+test("_TOOL_BY_ID['cinfo'] is info type", _TOOL_BY_ID["cinfo"]["type"] == "info")
+
+# All tool IDs unique
+all_ids = []
+for tools in CATEGORY_TOOLS.values():
+    all_ids.extend(t["id"] for t in tools)
+test("All tool IDs unique", len(all_ids) == len(set(all_ids)), f"{len(all_ids)} ids, {len(set(all_ids))} unique")
+test("Total tools is 35", len(all_ids) == 35, f"got {len(all_ids)}")
+
+# All callback data fits Telegram 64-byte limit
+long_callbacks = [f"tl:{tid}" for tid in all_ids] + [f"tl:cat:{cid}" for cid in cat_ids] + ["tl:back", "tl:noop"]
+over_limit = [cb for cb in long_callbacks if len(cb.encode("utf-8")) > 64]
+test("All callback data <= 64 bytes", len(over_limit) == 0, f"over: {over_limit}")
+
+# _TOOL_COMMANDS has cmd-type tools only
+cmd_count = sum(1 for tools in CATEGORY_TOOLS.values() for t in tools if t["type"] == "cmd")
+test("_TOOL_COMMANDS has all cmd-type tools", len(_TOOL_COMMANDS) == cmd_count, f"got {len(_TOOL_COMMANDS)}, expected {cmd_count}")
 test("tl:ls maps to ls command", "ls -la" in _TOOL_COMMANDS.get("tl:ls", ""))
 test("tl:uptime maps to uptime", _TOOL_COMMANDS.get("tl:uptime") == "uptime")
-test("tl:git maps to git status", "git status" in _TOOL_COMMANDS.get("tl:git", ""))
+test("tl:gst maps to git status", "git status" in _TOOL_COMMANDS.get("tl:gst", ""))
 
-# All callback keys start with tl:
-test("All callback keys start with tl:", all(k.startswith("tl:") for k in _TOOL_COMMANDS))
+# All _TOOL_COMMANDS keys start with tl:
+test("All _TOOL_COMMANDS keys start with tl:", all(k.startswith("tl:") for k in _TOOL_COMMANDS))
 
 # Handlers are callable
 test("tools_handler is callable", callable(tools_handler))

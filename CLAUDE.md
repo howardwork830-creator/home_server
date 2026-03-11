@@ -15,7 +15,7 @@ python3 bot.py
 # Run all services (bot + screen stream + go2rtc)
 python3 main.py
 
-# Run all 424 security tests
+# Run all 446 security tests
 python3 test_security.py
 
 # Install dependencies
@@ -47,7 +47,7 @@ There is no separate lint or build step. The test suite (`test_security.py`) use
 
 **Persistent terminal sessions** (`handlers/terminal.py` + `utils/terminal_manager.py`): Shell commands run inside tmux-backed persistent terminals (up to 3 per user). State (working directory, env vars) persists between commands. Output is captured via temp files with `tmux wait-for` synchronization. The `/t` command manages terminals (list, new, switch, close). Typing `exit` as a plain-text message closes the active terminal.
 
-**Inline Keyboard Callback pattern:** Many handlers use a dual-function pattern — a command handler sends an `InlineKeyboardMarkup`, and a `CallbackQueryHandler` handles button taps. Callback data uses unique prefixes per handler (`br:/cd/cdset:` for cd, `stm:` for steam, `app:` for app, `term:` for terminal, `tl:` for tools, `monitor_refresh` for monitor). Callback handlers perform manual auth checks against `AUTHORIZED_USER_IDS` since the `@authorized` decorator expects `update.message`.
+**Inline Keyboard Callback pattern:** Many handlers use a dual-function pattern — a command handler sends an `InlineKeyboardMarkup`, and a `CallbackQueryHandler` handles button taps. Callback data uses unique prefixes per handler (`br:/cd/cdset:` for cd, `stm:` for steam, `app:` for app, `term:` for terminal, `tl:` / `tl:cat:` / `tl:back` for tools, `monitor_refresh` for monitor). Callback handlers perform manual auth checks against `AUTHORIZED_USER_IDS` since the `@authorized` decorator expects `update.message`.
 
 **Claude integration** (`handlers/claude.py`): Invokes the `claude` CLI in agent mode with `--output-format stream-json`. Output is parsed by `utils/claude_stream.py`, buffered for 3-second intervals, and sent to Telegram in chunks. Tool access is restricted to `CLAUDE_ALLOWED_TOOLS` in config.
 
@@ -89,7 +89,7 @@ Configuration is split into focused modules under the `config/` package. All imp
 
 ## Testing
 
-All tests live in `test_security.py`. Tests use a custom `test(name, condition)` function (not unittest.TestCase). Sections are numbered 1–25 with printed headers during the run. All tests run together (`python3 test_security.py`); there is no way to run individual sections. New tests go before the RESULTS block at the end. Section 23 tests bot.py handler registration — add new handlers there too.
+All tests live in `test_security.py` (446 tests). Tests use a custom `test(name, condition)` function (not unittest.TestCase). Sections are numbered 1–25 with printed headers during the run. All tests run together (`python3 test_security.py`); there is no way to run individual sections. New tests go before the RESULTS block at the end. Section 23 tests bot.py handler registration — add new handlers there too.
 
 ## Environment
 

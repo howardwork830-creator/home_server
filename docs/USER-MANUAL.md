@@ -191,7 +191,7 @@ These are activated with the `/` prefix.
 | `/getfile <path>` | Download a file from server to Telegram |
 | `/app` | List, launch, or quit applications |
 | `/steam` | Control Steam & Remote Play |
-| `/tools` | Quick tools grid (files, system, network, dev) |
+| `/tools` | Tool hub — 8 categories, 35 tools |
 | `/sysinfo` | Detailed system info (battery, memory, hardware, storage) |
 | `/monitor` | Live screen monitor (screenshot or Mini App stream) |
 
@@ -278,18 +278,22 @@ Only apps in the safety allowlist can be launched (Safari, Finder, Terminal, VS 
 
 ---
 
-## Quick Tools
+## Tool Hub
 
-The `/tools` command displays a button grid of common shell commands organized into 4 categories. Tap any button to run the command instantly — no typing needed.
+The `/tools` command opens a **category-based hub** with 35 tools across 8 categories. Tap a category to see its tools, tap a tool to run it, and tap Back to return.
 
 | Category | Tools |
 |----------|-------|
-| **Files** | `ls -la`, `tree`, `du (sizes)`, `find recent` |
+| **Files** | `ls -la`, `tree`, `du (sizes)`, `find recent`, `wc (lines)`, `file types` |
+| **Git** | `status`, `log (10)`, `diff`, `diff --stat`, `branch`, `stash list` |
+| **Code/Dev** | `python3 -V`, `pip list`, `npm ls`, `brew outdated`, `brew list`, `which claude` |
+| **Terminals** | List terminals, New terminal, tmux sessions |
+| **Claude AI** | Enter chat mode, Continue session, Usage hint |
 | **System** | `ps (top 15)`, `df (disk)`, `uptime`, `top (snap)` |
-| **Network** | `ping 1.1.1.1`, `ifconfig`, `tailscale`, `netstat` |
-| **Dev** | `git status`, `git log`, `brew outdated`, `python3 -V` |
+| **Network** | `ping 1.1.1.1`, `tailscale`, `netstat`, `ifconfig` |
+| **Apps** | Running apps, Launch VS Code, Launch Finder |
 
-Commands that use a working directory (like `ls`, `tree`, `git status`) run in your current `/cd` directory.
+Commands that use a working directory (like `ls`, `tree`, `git status`) run in your current `/cd` directory. Link-type tools (Terminals, Claude, Apps) show a hint directing you to the relevant slash command.
 
 ---
 
