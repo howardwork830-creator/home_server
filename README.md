@@ -18,7 +18,7 @@ A Telegram bot for comprehensive remote administration of a Mac M1 home server. 
 - **Package management** — Homebrew operations, macOS software updates
 - **Audio & media** — Text-to-speech, image processing, audio playback
 - **Compression** — Archive and extract files (tar, zip, gzip)
-- **Tool hub** — `/tools` category-based hub with 35 tools across 8 categories (files, git, dev, terminals, Claude, system, network, apps)
+- **Tool hub** — `/tools` category-based hub with 34 tools across 8 categories (files, git, dev, terminals, Claude, system, network, apps)
 - **Steam Remote Play** — `/steam` to start/stop Steam, enter Big Picture mode, launch games from an allowlist, and get Steam Link setup tips
 - **Terminal management** — `/t` to list, create, switch, and close persistent terminals
 - **Tmux control** — List and send commands to tmux sessions
@@ -243,7 +243,7 @@ home server/
 │   ├── monitor.py             #   /monitor live screen capture
 │   ├── app.py                 #   /app launch/quit applications
 │   ├── steam.py               #   /steam control Steam & Remote Play
-│   ├── tools.py               #   /tools category-based tool hub (35 tools)
+│   ├── tools.py               #   /tools category-based tool hub (34 tools)
 │   ├── tmux.py                #   /tmux raw session control
 │   ├── cd.py                  #   /cd directory selector
 │   ├── newproject.py          #   /newproject create project folder

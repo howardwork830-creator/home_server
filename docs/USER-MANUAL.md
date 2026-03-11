@@ -191,7 +191,7 @@ These are activated with the `/` prefix.
 | `/getfile <path>` | Download a file from server to Telegram |
 | `/app` | List, launch, or quit applications |
 | `/steam` | Control Steam & Remote Play |
-| `/tools` | Tool hub — 8 categories, 35 tools |
+| `/tools` | Tool hub — 8 categories, 34 tools |
 | `/sysinfo` | Detailed system info (battery, memory, hardware, storage) |
 | `/monitor` | Live screen monitor (screenshot or Mini App stream) |
 
@@ -280,7 +280,7 @@ Only apps in the safety allowlist can be launched (Safari, Finder, Terminal, VS 
 
 ## Tool Hub
 
-The `/tools` command opens a **category-based hub** with 35 tools across 8 categories. Tap a category to see its tools, tap a tool to run it, and tap Back to return.
+The `/tools` command opens a **category-based hub** with 34 tools across 8 categories. Tap a category to see its tools, tap a tool to run it, and tap Back to return.
 
 | Category | Tools |
 |----------|-------|
