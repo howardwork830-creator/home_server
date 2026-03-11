@@ -15,14 +15,14 @@ python3 bot.py
 # Run all services (bot + screen stream + go2rtc)
 python3 main.py
 
-# Run all 407 security tests
+# Run all 424 security tests
 python3 test_security.py
 
 # Install dependencies
 pip install -r requirements.txt
 ```
 
-There is no separate lint or build step. The test suite (`test_security.py`) uses `unittest` with no external test runner.
+There is no separate lint or build step. The test suite (`test_security.py`) uses a custom `test()` function with no external test runner.
 
 ## Architecture
 
@@ -46,6 +46,8 @@ There is no separate lint or build step. The test suite (`test_security.py`) use
 - `main.py` — Unified CLI launcher for all services with selective flags (`--bot`, `--stream`, `--no-go2rtc`, etc.) and auto-restart of crashed child processes (up to 10 restarts per service)
 
 **Persistent terminal sessions** (`handlers/terminal.py` + `utils/terminal_manager.py`): Shell commands run inside tmux-backed persistent terminals (up to 3 per user). State (working directory, env vars) persists between commands. Output is captured via temp files with `tmux wait-for` synchronization. The `/t` command manages terminals (list, new, switch, close). Typing `exit` as a plain-text message closes the active terminal.
+
+**Inline Keyboard Callback pattern:** Many handlers use a dual-function pattern — a command handler sends an `InlineKeyboardMarkup`, and a `CallbackQueryHandler` handles button taps. Callback data uses unique prefixes per handler (`br:/cd/cdset:` for cd, `stm:` for steam, `app:` for app, `term:` for terminal, `tl:` for tools, `monitor_refresh` for monitor). Callback handlers perform manual auth checks against `AUTHORIZED_USER_IDS` since the `@authorized` decorator expects `update.message`.
 
 **Claude integration** (`handlers/claude.py`): Invokes the `claude` CLI in agent mode with `--output-format stream-json`. Output is parsed by `utils/claude_stream.py`, buffered for 3-second intervals, and sent to Telegram in chunks. Tool access is restricted to `CLAUDE_ALLOWED_TOOLS` in config.
 
@@ -79,10 +81,15 @@ Configuration is split into focused modules under the `config/` package. All imp
 2. Decorate with `@authorized` from `handlers/auth.py`
 3. Register in `bot.py` with the appropriate handler type
 4. If it's a command, add a `BotCommand` entry to `BOT_COMMANDS` in `bot.py`
+5. If using inline keyboards, add a `*_callback_handler` function with manual auth check (`AUTHORIZED_USER_IDS`)
+6. Register `CallbackQueryHandler` with a unique prefix pattern in `bot.py`
+7. Add to `handlers/start.py` `HELP_TEXT`
+8. Add tests in `test_security.py` (new section + registration test in section 23)
+9. Update `docs/USER-MANUAL.md` and `README.md`
 
 ## Testing
 
-All tests live in `test_security.py`. Tests are organized by security layer (metacharacter blocking, argument injection, path guards, scrubbing, rate limiting, stream parsing, etc.). When adding a new security rule, add corresponding test cases.
+All tests live in `test_security.py`. Tests use a custom `test(name, condition)` function (not unittest.TestCase). Sections are numbered 1–25 with printed headers during the run. All tests run together (`python3 test_security.py`); there is no way to run individual sections. New tests go before the RESULTS block at the end. Section 23 tests bot.py handler registration — add new handlers there too.
 
 ## Environment
 

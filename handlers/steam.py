@@ -1,10 +1,10 @@
 import os
 import re
 
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
-from config import STEAM_GAMES, STEAM_APP_PATH, logger
+from config import AUTHORIZED_USER_IDS, STEAM_GAMES, STEAM_APP_PATH, logger
 from handlers.auth import authorized
 from utils.subprocess_runner import run_shell_command
 
@@ -78,7 +78,25 @@ async def steam_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args or []
 
     if not args or args[0].lower() == "help":
-        await update.message.reply_text(HELP_TEXT)
+        # Show interactive menu instead of text help
+        buttons = [
+            [InlineKeyboardButton("📊 Status", callback_data="stm:status"),
+             InlineKeyboardButton("▶️ Start", callback_data="stm:start")],
+            [InlineKeyboardButton("⏹ Quit", callback_data="stm:quit"),
+             InlineKeyboardButton("🎮 Big Picture", callback_data="stm:bigpicture")],
+            [InlineKeyboardButton("📋 Games", callback_data="stm:games"),
+             InlineKeyboardButton("💡 Tips", callback_data="stm:tips")],
+        ]
+        # Add game buttons if configured
+        for name in sorted(STEAM_GAMES):
+            cb = f"stm:play:{name}"
+            if len(cb.encode("utf-8")) <= 64:
+                buttons.append([InlineKeyboardButton(
+                    f"🎮 Play {name}", callback_data=cb
+                )])
+        await update.message.reply_text(
+            "Steam Remote Play", reply_markup=InlineKeyboardMarkup(buttons)
+        )
         return
 
     action = args[0].lower()
@@ -200,3 +218,76 @@ async def steam_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     logger.info("Steam action by %s: %s", update.effective_user.id, " ".join(args))
+
+
+async def _run_steam_action(action: str, query, context):
+    """Execute a steam action and edit the original message with the result."""
+    user_id = query.from_user.id
+
+    if action == "status":
+        output, rc = await run_shell_command("pgrep -x Steam", timeout=10)
+        msg = "Steam is running." if rc == 0 else "Steam is not running."
+        await query.edit_message_text(msg)
+
+    elif action == "start":
+        if not os.path.isdir(STEAM_APP_PATH):
+            await query.edit_message_text(f"Steam not found at {STEAM_APP_PATH}.")
+            return
+        output, rc = await run_shell_command("open -a Steam", timeout=10)
+        await query.edit_message_text("Steam launched." if rc == 0 else f"Failed:\n{output}")
+
+    elif action == "quit":
+        output, rc = await run_shell_command("open steam://exit", timeout=10)
+        await query.edit_message_text(
+            "Sent quit signal to Steam." if rc == 0 else f"Failed:\n{output}"
+        )
+
+    elif action == "bigpicture":
+        check_output, check_rc = await run_shell_command("pgrep -x Steam", timeout=10)
+        if check_rc != 0:
+            if not os.path.isdir(STEAM_APP_PATH):
+                await query.edit_message_text(f"Steam not found at {STEAM_APP_PATH}.")
+                return
+            await run_shell_command("open -a Steam", timeout=10)
+        output, rc = await run_shell_command("open steam://open/bigpicture", timeout=10)
+        await query.edit_message_text(
+            "Big Picture mode activated." if rc == 0 else f"Failed:\n{output}"
+        )
+
+    elif action == "games":
+        if not STEAM_GAMES:
+            await query.edit_message_text("No games configured. Edit STEAM_GAMES in config/steam.py.")
+            return
+        listing = "\n".join(f"  - {n} (ID: {aid})" for n, aid in sorted(STEAM_GAMES.items()))
+        await query.edit_message_text(f"Configured games ({len(STEAM_GAMES)}):\n{listing}")
+
+    elif action == "tips":
+        await query.edit_message_text(TIPS_TEXT)
+
+    elif action.startswith("play:"):
+        game_name = action[5:]
+        result = _find_game(game_name)
+        if result is None:
+            await query.edit_message_text(f"Game '{game_name}' not found.")
+            return
+        canonical_name, app_id = result
+        output, rc = await run_shell_command(f"open steam://rungameid/{app_id}", timeout=10)
+        await query.edit_message_text(
+            f"Launching {canonical_name}..." if rc == 0 else f"Failed:\n{output}"
+        )
+
+    logger.info("Steam callback by %s: %s", user_id, action)
+
+
+async def steam_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle inline button taps for /steam."""
+    query = update.callback_query
+    await query.answer()
+
+    if query.from_user.id not in AUTHORIZED_USER_IDS:
+        await query.edit_message_text("Access denied.")
+        return
+
+    # data format: "stm:<action>" or "stm:play:<game>"
+    action = query.data[4:]  # strip "stm:"
+    await _run_steam_action(action, query, context)

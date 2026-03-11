@@ -1,9 +1,9 @@
 import re
 
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
-from config import APP_LAUNCH_ALLOWLIST, logger
+from config import APP_LAUNCH_ALLOWLIST, AUTHORIZED_USER_IDS, logger
 from handlers.auth import authorized
 from utils.subprocess_runner import run_shell_command
 
@@ -23,23 +23,49 @@ async def app_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /app — list, launch, quit, or kill macOS GUI applications."""
     args = context.args or []
 
-    # /app — list running GUI apps
+    # /app — show interactive app menu
     if not args:
         output, rc = await run_shell_command(
             "osascript -e 'tell application \"System Events\" to get name of "
             "every process whose background only is false'",
             timeout=10,
         )
-        if rc != 0:
-            await update.message.reply_text(f"Failed to list apps:\n```\n{output}\n```", parse_mode="Markdown")
+        running = []
+        if rc == 0:
+            running = [a.strip() for a in output.split(",") if a.strip()]
+
+        buttons = []
+        # Running apps — tap to quit
+        if running:
+            buttons.append([InlineKeyboardButton(
+                f"--- Running ({len(running)}) ---", callback_data="app:noop"
+            )])
+            for a in sorted(running):
+                cb = f"app:quit:{a}"
+                if len(cb.encode("utf-8")) <= 64:
+                    buttons.append([InlineKeyboardButton(
+                        f"⏹ {a}", callback_data=cb
+                    )])
+
+        # Launchable apps
+        not_running = sorted(APP_LAUNCH_ALLOWLIST - set(running))
+        if not_running:
+            buttons.append([InlineKeyboardButton(
+                "--- Launch ---", callback_data="app:noop"
+            )])
+            for a in not_running:
+                cb = f"app:launch:{a}"
+                if len(cb.encode("utf-8")) <= 64:
+                    buttons.append([InlineKeyboardButton(
+                        f"▶️ {a}", callback_data=cb
+                    )])
+
+        if not buttons:
+            await update.message.reply_text("No apps found and none in launch allowlist.")
             return
-        # osascript returns comma-separated names
-        apps = [a.strip() for a in output.split(",") if a.strip()]
-        if not apps:
-            await update.message.reply_text("No running GUI applications found.")
-            return
-        listing = "\n".join(f"  - {a}" for a in sorted(apps))
-        await update.message.reply_text(f"Running apps ({len(apps)}):\n{listing}")
+        await update.message.reply_text(
+            "Applications", reply_markup=InlineKeyboardMarkup(buttons)
+        )
         return
 
     action = args[0].lower()
@@ -95,3 +121,41 @@ async def app_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"Failed to kill {name}:\n```\n{output}\n```", parse_mode="Markdown")
 
     logger.info("App action by %s: %s %s", update.effective_user.id, action, name)
+
+
+async def app_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle inline button taps for /app."""
+    query = update.callback_query
+    await query.answer()
+
+    if query.from_user.id not in AUTHORIZED_USER_IDS:
+        await query.edit_message_text("Access denied.")
+        return
+
+    data = query.data
+
+    if data == "app:noop":
+        return
+
+    if data.startswith("app:launch:"):
+        name = data[len("app:launch:"):]
+        if name not in APP_LAUNCH_ALLOWLIST:
+            await query.edit_message_text(f"App '{name}' not in launch allowlist.")
+            return
+        output, rc = await run_shell_command(f"open -a '{name}'", timeout=10)
+        await query.edit_message_text(
+            f"Launched {name}." if rc == 0 else f"Failed to launch {name}:\n{output}"
+        )
+        logger.info("App callback by %s: launch %s", query.from_user.id, name)
+        return
+
+    if data.startswith("app:quit:"):
+        name = data[len("app:quit:"):]
+        output, rc = await run_shell_command(
+            f"osascript -e 'tell application \"{name}\" to quit'", timeout=10
+        )
+        await query.edit_message_text(
+            f"Sent quit to {name}." if rc == 0 else f"Failed to quit {name}:\n{output}"
+        )
+        logger.info("App callback by %s: quit %s", query.from_user.id, name)
+        return

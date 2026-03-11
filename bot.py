@@ -29,7 +29,7 @@ from config import (
 # Core
 from handlers.start import start_handler, help_handler
 from handlers.shell import shell_handler
-from handlers.terminal import terminal_handler
+from handlers.terminal import terminal_handler, terminal_callback_handler
 
 # Claude AI
 from handlers.claude import claude_handler, claude_continue_handler, chat_handler, exit_handler
@@ -39,8 +39,9 @@ from handlers.status import status_handler
 from handlers.sysinfo import sysinfo_handler
 from handlers.network import network_handler
 from handlers.monitor import monitor_handler, monitor_refresh_callback
-from handlers.app import app_handler
-from handlers.steam import steam_handler
+from handlers.app import app_handler, app_callback_handler
+from handlers.steam import steam_handler, steam_callback_handler
+from handlers.tools import tools_handler, tools_callback_handler
 from handlers.tmux import tmux_handler
 
 # Files & navigation
@@ -62,7 +63,8 @@ BOT_COMMANDS = [
     BotCommand("t", "Manage terminal sessions"),
     BotCommand("tmux", "Manage tmux sessions"),
     # Files & navigation
-    BotCommand("cd", "Change working directory"),
+    BotCommand("cd", "Browse files & set working directory"),
+    BotCommand("tools", "Quick tools (system, files, network, dev)"),
     BotCommand("newproject", "Create a new project"),
     BotCommand("getfile", "Download a file from server"),
     # System & monitoring
@@ -125,6 +127,7 @@ def main():
 
     # --- Files & navigation ---
     app.add_handler(CommandHandler("cd", cd_handler))
+    app.add_handler(CommandHandler("tools", tools_handler))
     app.add_handler(CommandHandler("newproject", newproject_handler))
     app.add_handler(CommandHandler("getfile", getfile_handler))
 
@@ -137,7 +140,11 @@ def main():
     app.add_handler(CommandHandler("steam", steam_handler))
 
     # --- Callback queries ---
-    app.add_handler(CallbackQueryHandler(cd_callback_handler, pattern=r"^cd"))
+    app.add_handler(CallbackQueryHandler(cd_callback_handler, pattern=r"^(br:|cd|cdset:)"))
+    app.add_handler(CallbackQueryHandler(steam_callback_handler, pattern=r"^stm:"))
+    app.add_handler(CallbackQueryHandler(app_callback_handler, pattern=r"^app:"))
+    app.add_handler(CallbackQueryHandler(terminal_callback_handler, pattern=r"^term:"))
+    app.add_handler(CallbackQueryHandler(tools_callback_handler, pattern=r"^tl:"))
     app.add_handler(CallbackQueryHandler(monitor_refresh_callback, pattern=r"^monitor_refresh$"))
 
     # --- File uploads (must be before the text catch-all) ---

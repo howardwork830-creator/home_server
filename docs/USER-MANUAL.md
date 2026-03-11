@@ -19,9 +19,9 @@ Every command runs inside a tmux-backed terminal. You get up to **3 terminals** 
 ### How It Works
 
 | Action | What happens |
-|--------|-------------|
+|--------|-------------
 | Send any command (e.g. `ls`) | Auto-creates Terminal 1 if none exist, runs command in it |
-| `cd src` then `ls` | `cd` persists — `ls` shows contents of `src/` |
+| `cd src` then `ls` | `cd` persists — `ls` shows contents of `src/` |pu
 | Type `exit` | Closes the active terminal |
 
 Output is prefixed with the terminal indicator: `[T1]`, `[T2: build]`, etc.
@@ -191,6 +191,7 @@ These are activated with the `/` prefix.
 | `/getfile <path>` | Download a file from server to Telegram |
 | `/app` | List, launch, or quit applications |
 | `/steam` | Control Steam & Remote Play |
+| `/tools` | Quick tools grid (files, system, network, dev) |
 | `/sysinfo` | Detailed system info (battery, memory, hardware, storage) |
 | `/monitor` | Live screen monitor (screenshot or Mini App stream) |
 
@@ -274,6 +275,21 @@ The selected directory becomes the working directory for new terminal sessions.
 ```
 
 Only apps in the safety allowlist can be launched (Safari, Finder, Terminal, VS Code, Preview, TextEdit, Activity Monitor, Console, Music, Photos, Calculator, Notes, Steam).
+
+---
+
+## Quick Tools
+
+The `/tools` command displays a button grid of common shell commands organized into 4 categories. Tap any button to run the command instantly — no typing needed.
+
+| Category | Tools |
+|----------|-------|
+| **Files** | `ls -la`, `tree`, `du (sizes)`, `find recent` |
+| **System** | `ps (top 15)`, `df (disk)`, `uptime`, `top (snap)` |
+| **Network** | `ping 1.1.1.1`, `ifconfig`, `tailscale`, `netstat` |
+| **Dev** | `git status`, `git log`, `brew outdated`, `python3 -V` |
+
+Commands that use a working directory (like `ls`, `tree`, `git status`) run in your current `/cd` directory.
 
 ---
 

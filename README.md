@@ -18,6 +18,7 @@ A Telegram bot for comprehensive remote administration of a Mac M1 home server. 
 - **Package management** — Homebrew operations, macOS software updates
 - **Audio & media** — Text-to-speech, image processing, audio playback
 - **Compression** — Archive and extract files (tar, zip, gzip)
+- **Quick tools grid** — `/tools` for one-tap access to common shell commands (files, system, network, dev)
 - **Steam Remote Play** — `/steam` to start/stop Steam, enter Big Picture mode, launch games from an allowlist, and get Steam Link setup tips
 - **Terminal management** — `/t` to list, create, switch, and close persistent terminals
 - **Tmux control** — List and send commands to tmux sessions
@@ -95,6 +96,7 @@ python3 main.py -C ~/projects      # change working directory
 | `/tmux send <session> <cmd>` | Send a command to a tmux session |
 | `/getfile <path>` | Download a file from server |
 | `/app` | List, launch, or quit applications |
+| `/tools` | Quick tools grid (files, system, network, dev) |
 | `/steam` | Control Steam & Remote Play (status, start, quit, bigpicture, play, games, tips) |
 | `/sysinfo` | Detailed system info (battery, memory, hardware) |
 | `/monitor` | Open live screen monitor (Telegram Mini App) |
@@ -219,7 +221,7 @@ home server/
 ├── bot.py                     # Entry point — handlers, polling with TCP keepalive
 ├── main.py                    # Unified CLI launcher with auto-restart (--bot, --stream, --no-go2rtc)
 ├── screen_stream.py           # Screen capture HTTP server (MJPEG + /frame)
-├── test_security.py           # Security test suite (407 tests)
+├── test_security.py           # Security test suite (424 tests)
 ├── config/                    # Configuration (split by concern)
 │   ├── __init__.py            #   Re-exports everything for backward compat
 │   ├── env.py                 #   Environment variables, paths, tokens
@@ -241,6 +243,7 @@ home server/
 │   ├── monitor.py             #   /monitor live screen capture
 │   ├── app.py                 #   /app launch/quit applications
 │   ├── steam.py               #   /steam control Steam & Remote Play
+│   ├── tools.py               #   /tools quick-action button grid
 │   ├── tmux.py                #   /tmux raw session control
 │   ├── cd.py                  #   /cd directory selector
 │   ├── newproject.py          #   /newproject create project folder
@@ -360,4 +363,4 @@ Pipes (`|`) are supported between allowlisted commands. All other shell operator
 python3 test_security.py
 ```
 
-Runs 407 tests covering all security layers: metacharacter blocking, argument injection defense, path guards, output scrubbing, rate limiting, audit logging, stream parsing, output capping, and command validation.
+Runs 424 tests covering all security layers: metacharacter blocking, argument injection defense, path guards, output scrubbing, rate limiting, audit logging, stream parsing, output capping, and command validation.

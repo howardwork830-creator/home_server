@@ -845,6 +845,9 @@ test("bot.py imports app_handler", "app_handler" in bot_src)
 test("bot.py imports sysinfo_handler", "sysinfo_handler" in bot_src)
 test("bot.py registers /steam", "steam_handler" in src)
 test("bot.py imports steam_handler", "steam_handler" in bot_src)
+test("bot.py registers /tools", "tools_handler" in src)
+test("bot.py imports tools_handler", "tools_handler" in bot_src)
+test("bot.py registers tools_callback_handler", "tools_callback_handler" in src)
 
 # ============================================================
 print()
@@ -871,6 +874,37 @@ test("Steam name: empty rejected", _sanitize_game_name("") is None)
 
 # APP_LAUNCH_ALLOWLIST includes Steam
 test("APP_LAUNCH_ALLOWLIST has Steam", "Steam" in APP_LAUNCH_ALLOWLIST)
+
+# ============================================================
+print()
+print("=" * 60)
+print("25. TOOLS — QUICK-ACTION BUTTON GRID")
+print("=" * 60)
+
+from handlers.tools import TOOL_CATEGORIES, _TOOL_COMMANDS, tools_handler, tools_callback_handler
+
+# Structure tests
+test("TOOL_CATEGORIES is list", isinstance(TOOL_CATEGORIES, list))
+test("TOOL_CATEGORIES has 4 categories", len(TOOL_CATEGORIES) == 4)
+cat_names = [name for name, _ in TOOL_CATEGORIES]
+test("Category: Files", "Files" in cat_names)
+test("Category: System", "System" in cat_names)
+test("Category: Network", "Network" in cat_names)
+test("Category: Dev", "Dev" in cat_names)
+
+# Lookup dict
+test("_TOOL_COMMANDS is dict", isinstance(_TOOL_COMMANDS, dict))
+test("_TOOL_COMMANDS has 16 entries", len(_TOOL_COMMANDS) == 16)
+test("tl:ls maps to ls command", "ls -la" in _TOOL_COMMANDS.get("tl:ls", ""))
+test("tl:uptime maps to uptime", _TOOL_COMMANDS.get("tl:uptime") == "uptime")
+test("tl:git maps to git status", "git status" in _TOOL_COMMANDS.get("tl:git", ""))
+
+# All callback keys start with tl:
+test("All callback keys start with tl:", all(k.startswith("tl:") for k in _TOOL_COMMANDS))
+
+# Handlers are callable
+test("tools_handler is callable", callable(tools_handler))
+test("tools_callback_handler is callable", callable(tools_callback_handler))
 
 # ============================================================
 print()
